@@ -19,10 +19,12 @@ Working app, system-wide. Builds clean, **59/59 unit tests pass**.
    cap), master volume/mute. Ambient bed layer — **PARKED** (Mike: "blows").
 3. Spatial key map, procedural synth, click-free envelopes.
 4. **Global WH_KEYBOARD_LL hook** — sounds in any app. MainWindow control panel.
-5. **Presets** (research-grounded low-cognitive-load): PercussionFactory
-   (kick/tap), PresetLibrary, live dropdown switching. 3 presets: Keyboard
-   (melodic template), **Pulse** (low beat, default), Thock (deep tap).
-   Rationale + sources: `docs/sound-design.md`.
+5. **Presets** (research-grounded): live dropdown switching, lazy baking.
+   **9 presets** — focus: Keyboard, **Pulse** (default), Thock; character:
+   Neon Nights (synthwave / "Blinding Lights"), After Dark (dark pluck /
+   "Starboy"), Electric (guitar), Grand Piano, Rhodes, Marimba. Synthesis in
+   Core/Audio: Synth/Percussion/String/Instrument factories. Rationale + the
+   preset table + sources: `docs/sound-design.md`.
 
 ## Open / next (in rough priority)
 - **Tune the low-beat presets by ear** (Mike used "works for now" — revisit when
