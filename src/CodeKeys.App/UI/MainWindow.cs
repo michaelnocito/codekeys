@@ -2,9 +2,7 @@ using CodeKeys.App.Audio;
 using CodeKeys.App.Input;
 using CodeKeys.Core.Audio;
 using CodeKeys.Core.Input;
-using CodeKeys.Core.Music;
-// `Scale` alias: WinForms Control has a Scale() method that shadows the type name here.
-using MusicScale = CodeKeys.Core.Music.Scale;
+using CodeKeys.Core.Presets;
 
 namespace CodeKeys.App.UI;
 
@@ -23,13 +21,13 @@ public sealed class MainWindow : Form
     private CheckBox _bedToggle = null!;
     private TrackBar _volume = null!;
     private Label _status = null!;
+    private ComboBox _presetPicker = null!;
 
     public MainWindow()
     {
-        // "Melody" voice set: C major pentatonic, warm tone, 2 octaves up from C3.
-        var map = new SpatialKeyMap(MusicScale.MajorPentatonic, NoteUtil.ParseNoteName("C3"), octaves: 2);
-        var voices = KeyVoiceSet.BakeSynth(map, AudioEngine.InternalRate, Waveform.WarmPad, Envelope.Pluck);
-        _keystrokes = new KeystrokeController(map, voices, _engine);
+        // Start on the default preset (Pulse — the low beat).
+        var baked = PresetLibrary.Default.Build(AudioEngine.InternalRate);
+        _keystrokes = new KeystrokeController(baked.Map, baked.Voices, _engine);
 
         BuildUi();
 
@@ -67,7 +65,7 @@ public sealed class MainWindow : Form
     private void BuildUi()
     {
         Text = "CodeKeys";
-        ClientSize = new Size(440, 200);
+        ClientSize = new Size(440, 246);
         StartPosition = FormStartPosition.CenterScreen;
         Font = new Font("Segoe UI", 9f);
         MaximizeBox = false;
@@ -81,13 +79,26 @@ public sealed class MainWindow : Form
             Height = 42
         };
 
-        _keysToggle = new CheckBox { Text = "⌨  Keystrokes", Checked = true, AutoSize = true, Left = 16, Top = 56 };
+        var presetLabel = new Label { Text = "Sound", AutoSize = true, Left = 16, Top = 56 };
+        _presetPicker = new ComboBox
+        {
+            DropDownStyle = ComboBoxStyle.DropDownList,
+            Left = 70,
+            Top = 52,
+            Width = 250
+        };
+        foreach (var preset in PresetLibrary.All)
+            _presetPicker.Items.Add(preset);
+        _presetPicker.SelectedItem = PresetLibrary.Default;
+        _presetPicker.SelectedIndexChanged += OnPresetChanged;
+
+        _keysToggle = new CheckBox { Text = "⌨  Keystrokes", Checked = true, AutoSize = true, Left = 16, Top = 96 };
         _keysToggle.CheckedChanged += (_, _) => _keystrokes.Enabled = _keysToggle.Checked;
 
-        _bedToggle = new CheckBox { Text = "🔊  Ambient bed (parked)", Checked = false, AutoSize = true, Left = 16, Top = 84 };
+        _bedToggle = new CheckBox { Text = "🔊  Ambient bed (parked)", Checked = false, AutoSize = true, Left = 180, Top = 96 };
         _bedToggle.CheckedChanged += (_, _) => _engine.BedEnabled = _bedToggle.Checked;
 
-        var volLabel = new Label { Text = "Master volume", AutoSize = true, Left = 16, Top = 118 };
+        var volLabel = new Label { Text = "Master volume", AutoSize = true, Left = 16, Top = 134 };
         _volume = new TrackBar
         {
             Minimum = 0,
@@ -96,7 +107,7 @@ public sealed class MainWindow : Form
             TickFrequency = 25,
             Width = 400,
             Left = 14,
-            Top = 138
+            Top = 154
         };
         _volume.ValueChanged += (_, _) => _engine.MasterVolume = _volume.Value / 100f;
 
@@ -104,10 +115,10 @@ public sealed class MainWindow : Form
         {
             Text = "ready",
             AutoSize = false,
-            Left = 200,
-            Top = 56,
-            Width = 224,
-            Height = 24,
+            Left = 330,
+            Top = 54,
+            Width = 94,
+            Height = 22,
             TextAlign = ContentAlignment.MiddleRight,
             ForeColor = SystemColors.Highlight,
             Font = new Font("Cascadia Mono", 10f)
@@ -123,6 +134,8 @@ public sealed class MainWindow : Form
             ForeColor = SystemColors.GrayText
         };
 
+        Controls.Add(presetLabel);
+        Controls.Add(_presetPicker);
         Controls.Add(_keysToggle);
         Controls.Add(_bedToggle);
         Controls.Add(volLabel);
@@ -130,6 +143,14 @@ public sealed class MainWindow : Form
         Controls.Add(_status);
         Controls.Add(heading);
         Controls.Add(stamp);
+    }
+
+    private void OnPresetChanged(object? sender, EventArgs e)
+    {
+        if (_presetPicker.SelectedItem is not Preset preset) return;
+        var baked = preset.Build(AudioEngine.InternalRate);
+        _keystrokes.SetVoices(baked.Map, baked.Voices);
+        _status.Text = "ready";
     }
 
     protected override void OnFormClosed(FormClosedEventArgs e)

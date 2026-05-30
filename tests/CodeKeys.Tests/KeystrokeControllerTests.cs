@@ -1,6 +1,7 @@
 using CodeKeys.Core.Audio;
 using CodeKeys.Core.Input;
 using CodeKeys.Core.Music;
+using CodeKeys.Core.Presets;
 using Xunit;
 
 namespace CodeKeys.Tests;
@@ -92,6 +93,21 @@ public class KeystrokeControllerTests
         var (c, p) = Build();
         c.OnKeyDown('A');
         c.ResetHeldKeys();
+        c.OnKeyDown('A');
+        Assert.Equal(2, p.PlayCount);
+    }
+
+    [Fact]
+    public void SetVoices_Swaps_Preset_Live_And_Clears_Held_Keys()
+    {
+        var (c, p) = Build();
+        c.OnKeyDown('A');               // 'A' now held
+        Assert.Equal(1, p.PlayCount);
+
+        var other = PresetLibrary.ById("thock")!.Build(44100);
+        c.SetVoices(other.Map, other.Voices);
+
+        // Held set was cleared, so 'A' sounds again immediately through the new preset.
         c.OnKeyDown('A');
         Assert.Equal(2, p.PlayCount);
     }

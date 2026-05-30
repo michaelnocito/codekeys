@@ -14,8 +14,8 @@ namespace CodeKeys.Core.Input;
 /// </summary>
 public sealed class KeystrokeController
 {
-    private readonly SpatialKeyMap _map;
-    private readonly KeyVoiceSet _voices;
+    private SpatialKeyMap _map;
+    private KeyVoiceSet _voices;
     private readonly IVoicePlayer _player;
     private readonly HashSet<int> _down = new();
     private readonly object _gate = new();
@@ -55,6 +55,17 @@ public sealed class KeystrokeController
     public void OnKeyUp(int virtualKey)
     {
         lock (_gate) _down.Remove(virtualKey);
+    }
+
+    /// <summary>Swap the active preset (map + baked voices) live. Clears held keys so none stick.</summary>
+    public void SetVoices(SpatialKeyMap map, KeyVoiceSet voices)
+    {
+        lock (_gate)
+        {
+            _map = map ?? throw new ArgumentNullException(nameof(map));
+            _voices = voices ?? throw new ArgumentNullException(nameof(voices));
+            _down.Clear();
+        }
     }
 
     /// <summary>Forget all held keys (e.g. on focus loss / hook reinstall) so none get stuck.</summary>

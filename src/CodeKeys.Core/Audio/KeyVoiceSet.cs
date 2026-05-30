@@ -44,18 +44,19 @@ public sealed class KeyVoiceSet
     };
 
     /// <summary>
-    /// Bake a synth voice set from a spatial map. Every distinct note in the map gets one
-    /// rendered buffer; the rhythm keys get musical sounds derived from the same root.
+    /// General builder: every distinct pitched note in the map gets one rendered buffer
+    /// via <paramref name="renderNote"/> (given the note's frequency in Hz). Keys sharing a
+    /// note share a buffer. Presets supply the renderer (tonal, percussive, …) and the
+    /// three rhythm sounds.
     /// </summary>
-    public static KeyVoiceSet BakeSynth(
+    public static KeyVoiceSet Bake(
         SpatialKeyMap map,
         int sampleRate,
-        Waveform wave,
-        Envelope env,
-        double holdSeconds = 0.18,
-        float gain = 0.7f)
+        Func<double, SampleBuffer> renderNote,
+        SampleBuffer space,
+        SampleBuffer enter,
+        SampleBuffer backspace)
     {
-        // One buffer per distinct MIDI note used by the map (keys sharing a note share a buffer).
         var distinctNotes = new HashSet<int>();
         foreach (var vk in KeyboardLayout.DefaultOrder)
         {
@@ -65,17 +66,30 @@ public sealed class KeyVoiceSet
 
         var pitched = new Dictionary<int, SampleBuffer>(distinctNotes.Count);
         foreach (var midi in distinctNotes)
-        {
-            double freq = NoteUtil.MidiToFrequency(midi);
-            pitched[midi] = SynthVoiceFactory.CreateTone(freq, sampleRate, wave, env, holdSeconds, gain);
-        }
+            pitched[midi] = renderNote(NoteUtil.MidiToFrequency(midi));
 
-        // Rhythm sounds, in-key relative to the map root.
+        return new KeyVoiceSet(sampleRate, pitched, space, enter, backspace);
+    }
+
+    /// <summary>
+    /// Bake a melodic synth voice set (the "Keyboard" preset). Pitched keys are tones on
+    /// the scale; the rhythm keys get musical sounds derived from the same root.
+    /// </summary>
+    public static KeyVoiceSet BakeSynth(
+        SpatialKeyMap map,
+        int sampleRate,
+        Waveform wave,
+        Envelope env,
+        double holdSeconds = 0.18,
+        float gain = 0.7f)
+    {
         double rootFreq = NoteUtil.MidiToFrequency(map.RootMidi);
         var space = SynthVoiceFactory.CreateTone(rootFreq / 2.0, sampleRate, Waveform.Sine, Envelope.FeltTap, 0.05, gain * 0.7f);
         var enter = SynthVoiceFactory.CreateTone(rootFreq * 3.0, sampleRate, Waveform.FmBell, Envelope.Bell, 0.05, gain * 0.6f);
         var backspace = SynthVoiceFactory.CreateTone(rootFreq / 1.5, sampleRate, Waveform.Triangle, Envelope.FeltTap, 0.04, gain * 0.6f);
 
-        return new KeyVoiceSet(sampleRate, pitched, space, enter, backspace);
+        return Bake(map, sampleRate,
+            f => SynthVoiceFactory.CreateTone(f, sampleRate, wave, env, holdSeconds, gain),
+            space, enter, backspace);
     }
 }
