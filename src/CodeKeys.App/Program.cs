@@ -8,8 +8,7 @@ internal static class Program
     private static void Main()
     {
         ApplicationConfiguration.Initialize();
-        // Milestone build: launch straight into the standalone test window (no global
-        // hook, no tray yet) so the two audio layers and latency can be validated by ear.
-        Application.Run(new TestWindow());
+        // Build step 4: control panel + system-wide keyboard hook. Tray comes later.
+        Application.Run(new MainWindow());
     }
 }

@@ -18,7 +18,7 @@ namespace CodeKeys.App.Audio;
 /// A master volume / mute stage sits over both (the panic kill). Audible buffers are
 /// pre-baked by Core; this class only mixes and streams them.
 /// </summary>
-public sealed class AudioEngine : IDisposable
+public sealed class AudioEngine : IDisposable, IVoicePlayer
 {
     public const int InternalRate = 44100;
 
@@ -91,6 +91,9 @@ public sealed class AudioEngine : IDisposable
     }
 
     // ---- Keystroke layer ----
+
+    /// <summary><see cref="IVoicePlayer"/> entry point — play a baked voice at unity gain.</summary>
+    public void Play(SampleBuffer buffer) => PlayVoice(buffer);
 
     /// <summary>Play a single pre-baked key voice, respecting the polyphony cap and the layer toggle.</summary>
     public void PlayVoice(SampleBuffer buffer, float gain = 1f)
