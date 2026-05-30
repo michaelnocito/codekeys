@@ -103,4 +103,87 @@ public static class PercussionFactory
         SynthVoiceFactory.FadeOutTail(s, sampleRate, 0.004);
         return buf;
     }
+
+    /// <summary>
+    /// A snare/clap: filtered noise under a sharp decay, with a couple of fast pre-echo
+    /// taps for the "clap" smear. Seeded for deterministic output.
+    /// </summary>
+    public static SampleBuffer CreateSnare(
+        int sampleRate,
+        double decaySeconds = 0.16,
+        double toneFreq = 180.0,
+        double toneAmount = 0.25,
+        int seed = 3,
+        float gain = 0.85f)
+    {
+        double total = decaySeconds + 0.03;
+        int count = Math.Max(1, (int)Math.Ceiling(total * sampleRate));
+        var s = new float[count];
+
+        var rng = new Random(seed);
+        double noiseTau = Math.Max(1e-4, decaySeconds / 4.0);
+        double tonePhase = 0;
+        double toneStep = 2.0 * Math.PI * toneFreq / sampleRate;
+        const double attack = 0.0015;
+
+        // Clap "smear": a few quick amplitude bursts at the very start.
+        double[] taps = { 0.0, 0.008, 0.016 };
+        double tapWidth = 0.006;
+
+        double prev = 0;
+        for (int i = 0; i < count; i++)
+        {
+            double t = i / (double)sampleRate;
+
+            double white = rng.NextDouble() * 2.0 - 1.0;
+            double hp = white - prev; // thin the noise (high-pass) for a snappier snare
+            prev = white;
+
+            double burst = 0;
+            foreach (var tap in taps)
+                if (t >= tap && t < tap + tapWidth)
+                    burst = Math.Max(burst, Math.Exp(-(t - tap) / 0.0025));
+            double bed = Math.Exp(-t / noiseTau);
+            double noiseEnv = Math.Max(bed, burst);
+
+            double tone = toneAmount * Math.Sin(tonePhase) * Math.Exp(-t / (noiseTau * 0.7));
+            tonePhase += toneStep;
+
+            double att = t < attack ? t / attack : 1.0;
+            s[i] = (float)((hp * noiseEnv + tone) * att * gain);
+        }
+
+        var buf = new SampleBuffer(s, sampleRate);
+        buf.NormalizeInPlace(0.85f);
+        SynthVoiceFactory.FadeOutTail(s, sampleRate, 0.004);
+        return buf;
+    }
+
+    /// <summary>A pure deep sub: a low sine with a soft attack and medium decay (no pitch drop).</summary>
+    public static SampleBuffer CreateSub(double freq, int sampleRate, double decaySeconds = 0.28, float gain = 0.9f)
+    {
+        if (freq <= 0) throw new ArgumentOutOfRangeException(nameof(freq));
+
+        double total = decaySeconds + 0.03;
+        int count = Math.Max(1, (int)Math.Ceiling(total * sampleRate));
+        var s = new float[count];
+
+        double tau = Math.Max(1e-4, decaySeconds / 4.0);
+        double phase = 0;
+        double step = 2.0 * Math.PI * freq / sampleRate;
+        const double attack = 0.004;
+
+        for (int i = 0; i < count; i++)
+        {
+            double t = i / (double)sampleRate;
+            double att = t < attack ? t / attack : 1.0;
+            s[i] = (float)(Math.Sin(phase) * Math.Exp(-t / tau) * att * gain);
+            phase += step;
+        }
+
+        var buf = new SampleBuffer(s, sampleRate);
+        buf.NormalizeInPlace(0.88f);
+        SynthVoiceFactory.FadeOutTail(s, sampleRate, 0.005);
+        return buf;
+    }
 }

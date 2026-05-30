@@ -40,13 +40,26 @@ exactly what competes with focused work.
   predictable, so it doesn't fight your attention the way an external varying
   melody does.
 
-## The starter presets
+## The presets
+
+Two families: **low-cognitive-load** (steady, percussive — for focus) and **character
+packs** (melodic/instrument — fun, more attention-grabbing). Pitched keys play the
+instrument; Space/Enter/Backspace get matching beats/accents.
 
 | Preset | Voice | Pitch range | Intent |
 |---|---|---|---|
 | **Keyboard (melodic)** | warm synth tone | 2 octaves (wide) | The fun, higher-interference template. Kept to clone from. |
-| **Pulse (low beat)** | soft low kick (pitch-drop sine + soft tick) | 1 low octave (A2, narrow) | The satisfying low beat; calm enough to fade out. **Default.** |
-| **Thock (deep tap)** | damped low tone + short knock | 1 low octave (A2, narrow) | Most neutral, lowest distraction. |
+| **Pulse (low beat)** | soft low kick (pitch-drop sine + tick) | 1 low octave (A2) | The satisfying low beat; calm enough to fade out. **Default.** |
+| **Thock (deep tap)** | damped low tone + knock | 1 low octave (A2) | Most neutral, lowest distraction. |
+| **Neon Nights (synthwave)** | detuned supersaw + gated kick/snare | 2 octaves (F minor) | 80s synthwave. Inspired by The Weeknd, *"Blinding Lights"*. |
+| **After Dark (dark pluck)** | Karplus pluck + 808 sub & clap | 1 low octave (A minor) | Dark, sparse, bouncy. Inspired by The Weeknd × Daft Punk, *"Starboy"*. |
+| **Electric (guitar)** | Karplus–Strong plucked string | 2 octaves (E minor) | Clean electric guitar. |
+| **Grand Piano** | additive harmonics + inharmonicity | 2 octaves (C) | Acoustic piano. |
+| **Rhodes (electric piano)** | 2-op FM | 2 octaves (C) | Warm EP, softer than the grand. |
+| **Marimba** | damped sine + bar partial | 2 octaves (C) | Mellow wooden mallet. |
+
+Synthesis lives in `Core/Audio` (Synth/Percussion/String/Instrument factories);
+preset wiring in `Core/Presets/PresetLibrary.cs`. Add a preset = add one entry there.
 
 Pitches and decay lengths are deliberately conservative and easy to tune by ear —
 see `PresetLibrary.cs`. Adding a preset = add one entry there (and, later, a pack

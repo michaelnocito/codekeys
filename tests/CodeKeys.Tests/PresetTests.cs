@@ -31,20 +31,30 @@ public class PresetTests
         Assert.Null(PresetLibrary.ById("nope"));
     }
 
-    [Theory]
-    [InlineData("keyboard")]
-    [InlineData("pulse")]
-    [InlineData("thock")]
-    public void Every_Preset_Sounds_All_Layout_And_Rhythm_Keys(string id)
+    [Fact]
+    public void Every_Built_In_Preset_Builds_And_Sounds_All_Keys()
     {
-        var baked = PresetLibrary.ById(id)!.Build(Rate);
+        foreach (var preset in PresetLibrary.All)
+        {
+            var baked = preset.Build(Rate);
 
-        foreach (var vk in KeyboardLayout.DefaultOrder)
-            Assert.NotNull(baked.Voices.Resolve(baked.Map.Resolve(vk)));
+            foreach (var vk in KeyboardLayout.DefaultOrder)
+                Assert.NotNull(baked.Voices.Resolve(baked.Map.Resolve(vk)));
 
-        Assert.NotNull(baked.Voices.Resolve(baked.Map.Resolve(VirtualKey.Space)));
-        Assert.NotNull(baked.Voices.Resolve(baked.Map.Resolve(VirtualKey.Enter)));
-        Assert.NotNull(baked.Voices.Resolve(baked.Map.Resolve(VirtualKey.Back)));
+            Assert.NotNull(baked.Voices.Resolve(baked.Map.Resolve(VirtualKey.Space)));
+            Assert.NotNull(baked.Voices.Resolve(baked.Map.Resolve(VirtualKey.Enter)));
+            Assert.NotNull(baked.Voices.Resolve(baked.Map.Resolve(VirtualKey.Back)));
+        }
+    }
+
+    [Fact]
+    public void Library_Exposes_The_Full_Set()
+    {
+        // current three + two song packs + guitar + piano + two bonuses
+        var ids = PresetLibrary.All.Select(p => p.Id).ToList();
+        Assert.Equal(ids.Count, ids.Distinct().Count()); // ids unique
+        foreach (var id in new[] { "neon-nights", "after-dark", "electric", "piano", "rhodes", "marimba" })
+            Assert.Contains(id, ids);
     }
 
     [Fact]
