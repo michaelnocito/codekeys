@@ -1,0 +1,7 @@
+# Normalize line endings; keep CRLF in working tree on Windows.
+* text=auto
+*.cs text
+*.csproj text
+*.json text
+*.md text
+*.manifest text
