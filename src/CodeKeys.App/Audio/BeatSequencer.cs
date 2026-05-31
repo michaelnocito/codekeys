@@ -40,6 +40,7 @@ public sealed class BeatSequencer : ISampleProvider
     private readonly List<ActiveVoice> _active = new();
 
     private BeatSpec _spec = null!; // set in ctor via SetSpec
+    private BeatSpec? _pending;     // live-update groove, applied at the next loop boundary
     private int _cycle;
     private Scheduled[] _schedule = Array.Empty<Scheduled>();
     private long _loopLen = 1;
@@ -59,12 +60,31 @@ public sealed class BeatSequencer : ISampleProvider
         lock (_gate)
         {
             _spec = spec;
+            _pending = null;
             _cycle = 0;
             BakeBank(spec);
             BuildSchedule();
             _playhead = 0;
             _nextIdx = 0;
             _active.Clear();
+        }
+    }
+
+    /// <summary>
+    /// Live typing update: refresh the groove from new signals (same mood). If the scale/root
+    /// match the current beat, this applies smoothly at the next loop boundary with no rebake
+    /// and no restart; if they differ (mood changed) it falls back to a full <see cref="SetSpec"/>.
+    /// </summary>
+    public void UpdateGroove(BeatSpec spec)
+    {
+        lock (_gate)
+        {
+            if (spec.Scale != _spec.Scale || spec.Root != _spec.Root)
+            {
+                SetSpec(spec);
+                return;
+            }
+            _pending = spec;
         }
     }
 
@@ -157,9 +177,18 @@ public sealed class BeatSequencer : ISampleProvider
                 {
                     _playhead = 0;
                     _nextIdx = 0;
-                    _cycle++;
-                    _spec = SignalsToBeat.Evolve(_spec, _cycle); // drift density + accents
-                    BuildSchedule();                              // reuses the baked bank
+                    if (_pending is not null)
+                    {
+                        _spec = _pending;        // apply the live typing update
+                        _pending = null;
+                        _cycle = 0;
+                    }
+                    else
+                    {
+                        _cycle++;
+                        _spec = SignalsToBeat.Evolve(_spec, _cycle); // drift density + accents
+                    }
+                    BuildSchedule();             // reuses the baked bank (scale/root unchanged)
                 }
             }
             return count;

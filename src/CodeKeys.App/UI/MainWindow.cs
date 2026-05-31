@@ -1,3 +1,5 @@
+using System.Diagnostics;
+using System.Runtime.InteropServices;
 using CodeKeys.App.Audio;
 using CodeKeys.App.Input;
 using CodeKeys.Core.Beat;
@@ -17,6 +19,13 @@ public sealed class MainWindow : Form
     private readonly GlobalKeyboardHook _hook = new();
     private readonly KeystrokeController _keystrokes;
     private readonly BeatSequencer _beat;
+
+    // Live typing capture (module 1) — feeds the beat. Records only timing + key categories,
+    // never the characters typed.
+    private readonly SignalsCollector _signals = new();
+    private readonly Stopwatch _clock = Stopwatch.StartNew();
+    private System.Windows.Forms.Timer _signalTimer = null!;
+    private bool _shiftDown;
 
     private CheckBox _keysToggle = null!;
     private CheckBox _bedToggle = null!;
@@ -56,7 +65,12 @@ public sealed class MainWindow : Form
         _engine.Start();
 
         _hook.KeyDown += OnHookKeyDown;
-        _hook.KeyUp += vk => _keystrokes.OnKeyUp(vk);
+        _hook.KeyUp += OnHookKeyUp;
+
+        // Refresh the beat from live typing every few seconds (applied at the next loop boundary).
+        _signalTimer = new System.Windows.Forms.Timer { Interval = 3000 };
+        _signalTimer.Tick += OnSignalTick;
+        _signalTimer.Start();
     }
 
     protected override void OnLoad(EventArgs e)
@@ -67,9 +81,33 @@ public sealed class MainWindow : Form
 
     private void OnHookKeyDown(int vk)
     {
+        if (vk is VirtualKey.ShiftL or VirtualKey.ShiftR or VirtualKey.Shift) _shiftDown = true;
+
+        // Capture typing signals (category + timing only — never the character).
+        var kind = KeyClassifier.Classify(vk);
+        bool isUpper = kind == KeyKind.Letter && (_shiftDown ^ CapsLockOn());
+        _signals.Record(_clock.ElapsedMilliseconds, kind, isUpper);
+
         if (_keystrokes.OnKeyDown(vk))
             _status.Text = $"♪ {Describe(vk)}";
     }
+
+    private void OnHookKeyUp(int vk)
+    {
+        if (vk is VirtualKey.ShiftL or VirtualKey.ShiftR or VirtualKey.Shift) _shiftDown = false;
+        _keystrokes.OnKeyUp(vk);
+    }
+
+    private void OnSignalTick(object? sender, EventArgs e)
+    {
+        if (_moodPicker.SelectedItem is not BeatPreset mood) return;
+        _beat.UpdateGroove(SignalsToBeat.Of(_signals.Snapshot(), mood));
+    }
+
+    [DllImport("user32.dll")]
+    private static extern short GetKeyState(int nVirtKey);
+
+    private static bool CapsLockOn() => (GetKeyState(VirtualKey.CapsLock) & 1) != 0;
 
     private static string Describe(int vk) => vk switch
     {
@@ -195,6 +233,8 @@ public sealed class MainWindow : Form
 
     protected override void OnFormClosed(FormClosedEventArgs e)
     {
+        _signalTimer?.Stop();
+        _signalTimer?.Dispose();
         _hook.Dispose();
         _engine.Dispose();
         base.OnFormClosed(e);

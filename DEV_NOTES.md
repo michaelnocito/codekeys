@@ -40,10 +40,13 @@ Working app, system-wide. Builds clean, **59/59 unit tests pass**.
   `AudioEngine.SetBedProvider` at −12 dB (bedLevel 0.25). MainWindow: **Beat
   toggle + Mood dropdown** (Focused/Relaxed/Burnout/Silly). Brown-noise bed
   retired. Voices: pad/pulse/marimba/arp/ghost.
-- **Module 1 (live capture → Signals) still TODO.** For now the beat uses a static
-  representative `Signals` per mood. **Privacy:** capture must compute stats only
-  (gaps, counts) and NEVER store typed text — beat seeds from mood, `Signals.Text`
-  stays empty.
+- **Module 1 (live capture → Signals) DONE.** `Core/Input/KeyClassifier` (vk→KeyKind)
+  + `Core/Beat/SignalsCollector` (rolling 12s window → Signals; records only timing
+  + category + an upper/lower bit, **never the characters** — `Signals.Text` always
+  empty). MainWindow feeds the hook into the collector and a 3s timer snapshots →
+  `SignalsToBeat.Of` → `BeatSequencer.UpdateGroove` (applies at next loop boundary,
+  no rebake when scale/root unchanged). So the beat now reacts to real typing
+  speed/backspaces/punctuation. **All 3 beat modules complete.**
 
 ## Open / next (in rough priority)
 - **Tune the low-beat presets by ear** (Mike used "works for now" — revisit when
