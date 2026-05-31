@@ -28,6 +28,17 @@ Working app, system-wide. Builds clean, **59/59 unit tests pass**.
    Synthesis in Core/Audio: Synth/Percussion/String/Instrument factories.
    Preset table + sources: `docs/sound-design.md`.
 
+## Generative beat system (NEW — module 2 of 3 done)
+- **Brain ported to C#** (`Core/Beat`): `Signals` → `SignalsToBeat.Of` → `BeatSpec`
+  (+ `Evolve`). Pure, deterministic (FNV-1a + mulberry32 bit-for-bit from the TS
+  original), 17 tests. `BeatSpec.Scale`/`Root` = single tonal source of truth;
+  bridge `SignalsToBeat.ToScale`/`RootMidi` → Music types. Dorian scale added.
+- **Module 1 (capture → Signals)** and **Module 3 (renderer / "BeatEngine")** still
+  to do. **OPEN DECISION:** renderer stack. The TS directive says Tone.js (web),
+  BUT a browser CANNOT capture system-wide keystrokes — that's CodeKeys' whole
+  point — so the renderer must be **native NAudio** to keep the system-wide app.
+  (Tone.js only fits if pivoting to an in-page web typing-toy.) Awaiting Mike.
+
 ## Open / next (in rough priority)
 - **Tune the low-beat presets by ear** (Mike used "works for now" — revisit when
   he has tuning notes: punch, pitch, length, attack tick). Names are placeholders.
