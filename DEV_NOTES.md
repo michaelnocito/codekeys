@@ -182,6 +182,23 @@ an **instrument change**, not a behavior change:
   (dormant), so they're easy to bring back if Mike wants.
 - So the active bed = **Pad (warmth) + Pulse/Ghost (drums) + Bass (body)**.
 
+### Breathing cycle + Reset button + softer pulse (2026-05-31)
+Mike: (1) after the peak, fall back to silence at a rate **25% faster than the
+rise**, then repeat the pattern; (2) needs a UI **Reset** to restart the beat
+without toggling Beat off/on; (3) the driving kick was "acting like a melody" —
+needs less harsh, more sustain, more atmospheric. Changes:
+- **`Conductor.CycleEnvelope(t)`** wraps `BuildupEnvelope` as the rise (p², 10 min)
+  + a mirrored ease-out fall ((1-p)², 8 min) — `FallSeconds = BuildupSeconds /
+  FallSpeedFactor (1.25)`. Total cycle = `CycleSeconds` (18 min). Loops forever
+  (modulo CycleSeconds). `Step` + `BeatSequencer` now use `CycleEnvelope` so
+  voices/density/arousal-gating breathe in and out together.
+- **`BeatSequencer.Reset()`** + a **"↺ Reset beat"** Button in MainWindow that
+  restarts the cycle from silence (no rebake, no toggle dance).
+- **Pulse voice** swapped from `CreateKick` (pitch-drop thump + click) → 
+  `CreateSub(decay 0.55s, gain 0.55)` — a pure low sine with a soft attack and
+  long sustain. Reads as a warm "hummmm" rather than a driving kick — less
+  melodic-feeling, more atmospheric.
+
 ### Additive build is now the DEFAULT (2026-05-31) — fixed dom-dom-dom regression
 Mike: it was hitting "dom dom dom dom" from t=0 instead of being "almost not
 noticeable" like the original Buildup spec. Root cause: when the Buildup toggle

@@ -34,7 +34,14 @@ public static class Conductor
     // The slow additive build over which voices enter one at a time ("people in public adding to
     // a beat" — Steve Reich's Drumming / West African drum-circle layering). DEFAULT behaviour, not
     // an opt-in: every session starts almost silent and the texture assembles over these seconds.
-    public const double BuildupSeconds = 600; // 10 minutes
+    public const double BuildupSeconds = 600; // 10 minutes — the RISE half of the cycle
+
+    // After the peak the music gracefully unwinds back to silence, then the rise begins again — an
+    // organic breathing pattern (like waves, or a drum circle dispersing and reforming). The fall
+    // is 25% faster than the rise (Mike's "drop back down at 25% faster" request).
+    public const double FallSpeedFactor = 1.25;
+    public static double FallSeconds => BuildupSeconds / FallSpeedFactor;     // 480 s = 8 min
+    public static double CycleSeconds => BuildupSeconds + FallSeconds;        // 1080 s = 18 min
 
     // session-arc phase boundaries, in seconds
     public const double EstablishUntil   = 120;  // 0–2 min: pad + pulse only, sparse
@@ -79,15 +86,37 @@ public static class Conductor
     }
 
     /// <summary>
-    /// The additive-build envelope 0..1 over <see cref="BuildupSeconds"/>. **Ease-in (p²)** so the
-    /// first minutes are almost imperceptible (at 1 min in, envelope ≈ 0.028; at 5 min in, ≈ 0.25)
-    /// — the slow, organic "people slowly join the beat" rise Mike asked for. Returned as a
-    /// fraction the renderer + Step use to gate volume, note-fill, and voice entry.
+    /// The rise primitive: 0..1 over <see cref="BuildupSeconds"/>, ease-in (p²). Used as the rise
+    /// half of <see cref="CycleEnvelope"/>; kept public so callers can reason about a single rise.
     /// </summary>
     public static double BuildupEnvelope(double elapsedSeconds)
     {
         double p = Clamp(elapsedSeconds / BuildupSeconds, 0, 1);
         return p * p;
+    }
+
+    /// <summary>
+    /// The breathing cycle envelope, **repeats forever**: an ease-in rise over
+    /// <see cref="BuildupSeconds"/> (~10 min), then an ease-out fall over <see cref="FallSeconds"/>
+    /// (~8 min, 25% faster than the rise), then back to the beginning. The rise is p², the fall is
+    /// (1-p)² — the curves mirror, so the music slowly assembles, briefly peaks, gracefully unwinds
+    /// to silence, then begins again. Returns 0..1 — the renderer + Step use it to gate volume,
+    /// note-fill, voice entry, and arousal response.
+    /// </summary>
+    public static double CycleEnvelope(double elapsedSeconds)
+    {
+        double t = elapsedSeconds % CycleSeconds;
+        if (t < BuildupSeconds)
+        {
+            double p = t / BuildupSeconds;
+            return p * p; // rise
+        }
+        else
+        {
+            double p = (t - BuildupSeconds) / FallSeconds;
+            double inv = 1 - p;
+            return inv * inv; // fall (mirror of the rise curve, time-compressed)
+        }
     }
 
     /// <summary>
@@ -102,7 +131,9 @@ public static class Conductor
     public static BeatSpec Step(BeatSpec current, double userArousal, double elapsedSeconds,
                                 double dtSeconds, int bpmLo, int bpmHi, double sensitivity = 1.0)
     {
-        double build = BuildupEnvelope(elapsedSeconds);
+        // The breathing cycle: voices come in over the rise, peak briefly, unwind over the fall,
+        // then begin again. `build` is the same fraction for layer thresholds and gating.
+        double build = CycleEnvelope(elapsedSeconds);
 
         // Read current musical arousal back from where the tempo sits in the preset's range.
         double m = bpmHi > bpmLo ? Clamp((current.Bpm - bpmLo) / (double)(bpmHi - bpmLo), 0, 1) : 0.5;

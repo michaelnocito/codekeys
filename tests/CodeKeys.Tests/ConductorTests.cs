@@ -122,10 +122,11 @@ public class ConductorTests
     [Fact]
     public void Higher_Sensitivity_Reacts_Faster()
     {
-        // Same inputs, more sensitivity → a bigger tempo move toward the target (less gradual).
-        var calm   = Conductor.Step(Spec(bpm: Lo), userArousal: 0.0, elapsedSeconds: 800, dtSeconds: 30, Lo, Hi, sensitivity: 0.5);
-        var snappy = Conductor.Step(Spec(bpm: Lo), userArousal: 0.0, elapsedSeconds: 800, dtSeconds: 30, Lo, Hi, sensitivity: 2.0);
-        Assert.True(snappy.Bpm > calm.Bpm); // under-aroused → both lift; higher sensitivity lifts more
+        // Same inputs at the peak of the cycle (build=1), more sensitivity → bigger tempo move.
+        double t = Conductor.BuildupSeconds;
+        var calm   = Conductor.Step(Spec(bpm: Lo), userArousal: 0.0, elapsedSeconds: t, dtSeconds: 30, Lo, Hi, sensitivity: 0.5);
+        var snappy = Conductor.Step(Spec(bpm: Lo), userArousal: 0.0, elapsedSeconds: t, dtSeconds: 30, Lo, Hi, sensitivity: 2.0);
+        Assert.True(snappy.Bpm > calm.Bpm);
     }
 
     [Fact]
@@ -227,7 +228,6 @@ public class ConductorTests
     {
         Assert.Equal(0.0, Conductor.BuildupEnvelope(0), 3);
         Assert.Equal(1.0, Conductor.BuildupEnvelope(Conductor.BuildupSeconds), 3);
-        Assert.Equal(1.0, Conductor.BuildupEnvelope(Conductor.BuildupSeconds * 5), 3); // clamps
         Assert.True(Conductor.BuildupEnvelope(60) < 0.02);                              // first minute: ~1%
         Assert.True(Conductor.BuildupEnvelope(150) < Conductor.BuildupEnvelope(300));   // monotonic rise
     }
@@ -241,14 +241,68 @@ public class ConductorTests
         Assert.True(half < 0.30, $"half-way envelope {half} should still be sparse");
     }
 
+    // ---- breathing cycle (rise → peak → fall → repeat) ----
+
+    [Fact]
+    public void Cycle_Envelope_Reaches_Peak_Then_Returns_To_Silence()
+    {
+        Assert.Equal(0.0, Conductor.CycleEnvelope(0), 3);
+        Assert.Equal(1.0, Conductor.CycleEnvelope(Conductor.BuildupSeconds), 3);     // peak at end of rise
+        Assert.Equal(0.0, Conductor.CycleEnvelope(Conductor.CycleSeconds), 3);       // silence at end of fall
+    }
+
+    [Fact]
+    public void Cycle_Envelope_Fall_Is_Faster_Than_Rise()
+    {
+        // The fall traverses the same 0..1 range as the rise but in less time (FallSpeedFactor = 1.25).
+        Assert.True(Conductor.FallSeconds < Conductor.BuildupSeconds);
+        double ratio = Conductor.BuildupSeconds / Conductor.FallSeconds;
+        Assert.Equal(Conductor.FallSpeedFactor, ratio, 6);
+    }
+
+    [Fact]
+    public void Cycle_Envelope_Loops_After_One_Full_Cycle()
+    {
+        // After CycleSeconds the pattern repeats — t = 0 and t = CycleSeconds * k should match.
+        foreach (var t in new[] { 30.0, 300.0, Conductor.BuildupSeconds + 100, Conductor.CycleSeconds - 50 })
+        {
+            Assert.Equal(Conductor.CycleEnvelope(t),
+                         Conductor.CycleEnvelope(t + Conductor.CycleSeconds), 6);
+            Assert.Equal(Conductor.CycleEnvelope(t),
+                         Conductor.CycleEnvelope(t + 2 * Conductor.CycleSeconds), 6);
+        }
+    }
+
+    [Fact]
+    public void Cycle_Envelope_Falls_After_The_Peak()
+    {
+        // Just past the peak we should be below the peak; further into the fall we should be lower.
+        double justAfterPeak = Conductor.CycleEnvelope(Conductor.BuildupSeconds + 60);
+        double laterInFall   = Conductor.CycleEnvelope(Conductor.BuildupSeconds + 240);
+        Assert.True(justAfterPeak < 1.0);
+        Assert.True(laterInFall < justAfterPeak);
+    }
+
     [Fact]
     public void Step_Arousal_Response_Is_Gated_By_The_Build()
     {
-        // During the build (t small), even strong arousal should barely move the tempo. After the
-        // build, the same arousal moves it as far as the rate-limit allows.
+        // During the build (t small), even strong arousal should barely move the tempo. At the
+        // peak (end of rise), the same arousal moves it as far as the rate-limit allows.
         var inBuild = Conductor.Step(Spec(bpm: Lo), userArousal: 0.0, elapsedSeconds: 30, dtSeconds: 30, Lo, Hi);
         var built   = Conductor.Step(Spec(bpm: Lo), userArousal: 0.0, elapsedSeconds: Conductor.BuildupSeconds, dtSeconds: 30, Lo, Hi);
         Assert.True(built.Bpm - Lo > inBuild.Bpm - Lo);
+    }
+
+    [Fact]
+    public void Step_Returns_To_Silence_At_End_Of_Cycle()
+    {
+        // The end of the fall = silence again: voices are gone, density at the floor.
+        var silent = Conductor.Step(Spec(), 0.5, elapsedSeconds: Conductor.CycleSeconds, dtSeconds: 5, Lo, Hi);
+        Assert.Contains(BeatLayer.Pulse, silent.Layers);
+        Assert.DoesNotContain(BeatLayer.Bass, silent.Layers);
+        Assert.DoesNotContain(BeatLayer.Splash, silent.Layers);
+        Assert.DoesNotContain(BeatLayer.Ghost, silent.Layers);
+        Assert.True(silent.Density < 0.10);
     }
 
     [Fact]

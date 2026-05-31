@@ -74,12 +74,35 @@ public sealed class BeatSequencer : ISampleProvider
             // dt = 0 + elapsedSeconds = 0 → tempo unchanged; just applies the build's opening
             // (Pulse only, near-silent) so the texture starts from the bottom of the curve.
             _spec = Conductor.Step(spec, _userArousal, elapsedSeconds: 0, dtSeconds: 0, lo, hi, _sensitivity);
-            double e0 = Conductor.BuildupEnvelope(0);
+            double e0 = Conductor.CycleEnvelope(0);
             _buildGain = (float)(0.06 + 0.94 * e0);
             _noteFill = e0;
             _sessionSamples = 0;
             _loopCount = 0;
             BakeBank(_spec);
+            BuildSchedule();
+            _playhead = 0;
+            _nextIdx = 0;
+            _active.Clear();
+        }
+    }
+
+    /// <summary>
+    /// Restart the breathing cycle from the very beginning (silent → rise → peak → fall → repeat),
+    /// without rebaking the voice bank. The bound user "Reset" button calls this so a fresh build
+    /// can be heard without toggling Beat off/on.
+    /// </summary>
+    public void Reset()
+    {
+        lock (_gate)
+        {
+            _sessionSamples = 0;
+            _loopCount = 0;
+            var (lo, hi) = SignalsToBeat.BpmRange(_spec.Preset);
+            _spec = Conductor.Step(_spec, _userArousal, elapsedSeconds: 0, dtSeconds: 0, lo, hi, _sensitivity);
+            double e0 = Conductor.CycleEnvelope(0);
+            _buildGain = (float)(0.06 + 0.94 * e0);
+            _noteFill = e0;
             BuildSchedule();
             _playhead = 0;
             _nextIdx = 0;
@@ -156,7 +179,10 @@ public sealed class BeatSequencer : ISampleProvider
         double f = NoteUtil.MidiToFrequency(midi);
         SampleBuffer buf = layer switch
         {
-            BeatLayer.Pulse => PercussionFactory.CreateKick(f, _rate, bodyDecaySeconds: 0.22, clickAmount: 0.04),
+            // Atmospheric pulse — a pure deep sine with a soft attack and long sustain (no pitch
+            // drop, no click). Reads as a warm "hummmm" rather than a driving kick — gentler in the
+            // mix, less of a melodic-feeling transient pulling at attention.
+            BeatLayer.Pulse => PercussionFactory.CreateSub(f, _rate, decaySeconds: 0.55, gain: 0.55f),
             BeatLayer.Pad => SynthVoiceFactory.CreateTone(f, _rate, Waveform.WarmPad,
                                 new Envelope { Attack = 0.06, Decay = 0.5, Sustain = 0.6, Release = 0.9 },
                                 holdSeconds: 1.2, gain: 0.35f),
@@ -243,7 +269,7 @@ public sealed class BeatSequencer : ISampleProvider
                     double dt = _loopLen / (double)_rate;
                     var (lo, hi) = SignalsToBeat.BpmRange(_spec.Preset);
                     _spec = Conductor.Step(_spec, _userArousal, elapsed, dt, lo, hi, _sensitivity);
-                    double e = Conductor.BuildupEnvelope(elapsed);
+                    double e = Conductor.CycleEnvelope(elapsed);
                     _buildGain = (float)(0.06 + 0.94 * e);
                     _noteFill = e;
                     _loopCount++;

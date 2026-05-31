@@ -161,6 +161,10 @@ public sealed class MainWindow : Form
         var demoToggle = new CheckBox { Text = "⚡  Demo (fast)", Checked = false, AutoSize = true, Left = 130, Top = 124 };
         demoToggle.CheckedChanged += (_, _) => _beat.TimeScale = demoToggle.Checked ? 20.0 : 1.0;
 
+        // Restart the breathing cycle at silence without toggling Beat off/on.
+        var resetButton = new Button { Text = "↺  Reset beat", AutoSize = true, Left = 260, Top = 122 };
+        resetButton.Click += (_, _) => _beat.Reset();
+
         var volHint = new Label
         {
             Text = "🔊  Volume follows Windows — adjust it from the taskbar volume / mixer.",
@@ -200,6 +204,7 @@ public sealed class MainWindow : Form
         Controls.Add(_keysToggle);
         Controls.Add(_bedToggle);
         Controls.Add(demoToggle);
+        Controls.Add(resetButton);
         Controls.Add(volHint);
         Controls.Add(_status);
         Controls.Add(heading);
