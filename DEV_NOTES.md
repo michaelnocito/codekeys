@@ -151,12 +151,28 @@ hit gain 0.25. Conductor adds Chime from the **Statement** phase (with the melod
 because probability tracks Density, it naturally grows in fuller moments and thins
 when calm. Baked in `BeatSequencer.BakeBank`. Added to FullSpec test + arc tests.
 
+### Buildup mode (2026-05-31)
+Mike wanted a separate setting: a slow ~10-min crescendo from almost-silent/ultra-
+sparse to the full coherent beat — subtle, song-like, "barely noticeable at first."
+- **`Conductor.BuildupEnvelope(elapsed)`** = smoothstep 0→1 over `BuildupSeconds`
+  (600s). **`Conductor.BuildupSpec`** (pure, time-driven, ignores arousal): density
+  0.04→0.7, tempo lifts gently, layers enter progressively (Pad>0.05, Melody>0.30,
+  Chime>0.50, Marimba>0.65 of the envelope).
+- **`BeatPattern.Build` gained an `intensity` (note-fill) param** (default 1.0 =
+  no-op, byte-identical normal mode — guarded so it consumes no rng at 1.0). <1
+  thins the kick (only bar-start kick early) + melody (notes fill in) → sparse→full.
+- **`BeatSequencer.Buildup`** property (toggle; resets the clock). In buildup it
+  uses `BuildupSpec`, rides an **output crescendo** (`_buildupGain` 0.05→1.0) and
+  passes `_noteFill = envelope` to Build. Works with the Demo toggle (20×) to
+  audition the whole 10-min arc in ~30s. UI: "🎚 Buildup (slow 10-min build)".
+  Note: buildup bypasses the adaptive thermostat (Reactivity slider doesn't apply).
+
 ### NEXT (after Mike's ear test)
 - **Re-tune by ear** the consts in `Conductor.cs`; `_keysLevel`/`_bedLevel` in
   `AudioEngine.cs`. Back-beat variance knobs: off-beat prob `Density*0.30`, fill
-  cadence `cycle % 2`; chime density `Density*0.10` in `BeatPattern`. Reactivity
-  live via the slider. Could add more soft effects (e.g. a rare shimmer/pad swell)
-  if Mike wants — same pattern as Chime.
+  cadence `cycle % 2`; chime density `Density*0.10` in `BeatPattern`. Buildup knobs:
+  `BuildupSeconds`, the envelope curve, layer thresholds, `_buildupGain` floor.
+  Could add more soft effects (rare shimmer/pad swell) — same pattern as Chime.
   Does it now feel like background that holds the pulse and only guides when sure?
 - Possible deeper **voice enrichment** from the library (soft Rhodes/bells/richer
   pad) — held back because Mike likes the base tone; pick by ear next.

@@ -170,8 +170,12 @@ public sealed class MainWindow : Form
         _moodPicker.SelectedItem = BeatPreset.Focused;
         _moodPicker.SelectedIndexChanged += OnMoodChanged;
 
-        // Dev/demo aid: compress the ~12-min beat build-up into seconds so it's auditionable.
-        var demoToggle = new CheckBox { Text = "⚡  Demo build-up (fast arc)", Checked = false, AutoSize = true, Left = 16, Top = 150 };
+        // Buildup: a slow ~10-min crescendo from near-silent to the full beat (a separate experience).
+        var buildupToggle = new CheckBox { Text = "🎚  Buildup (slow 10-min build)", Checked = false, AutoSize = true, Left = 16, Top = 150 };
+        buildupToggle.CheckedChanged += (_, _) => _beat.Buildup = buildupToggle.Checked;
+
+        // Dev/demo aid: compress the build clock 20× so it's auditionable in seconds (works with Buildup).
+        var demoToggle = new CheckBox { Text = "⚡  Demo (fast)", Checked = false, AutoSize = true, Left = 250, Top = 150 };
         demoToggle.CheckedChanged += (_, _) => _beat.TimeScale = demoToggle.Checked ? 20.0 : 1.0;
 
         // Reactivity: how fast the beat follows your typing (maps to Conductor sensitivity).
@@ -228,6 +232,7 @@ public sealed class MainWindow : Form
         Controls.Add(_bedToggle);
         Controls.Add(moodLabel);
         Controls.Add(_moodPicker);
+        Controls.Add(buildupToggle);
         Controls.Add(demoToggle);
         Controls.Add(reactLabel);
         Controls.Add(reactSlider);

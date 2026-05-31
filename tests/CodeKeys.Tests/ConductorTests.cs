@@ -192,6 +192,35 @@ public class ConductorTests
         Assert.Equal(a.Layers, b.Layers);
     }
 
+    // ---- buildup mode ----
+
+    [Fact]
+    public void Buildup_Envelope_Spans_Zero_To_One_And_Starts_Barely_There()
+    {
+        Assert.Equal(0.0, Conductor.BuildupEnvelope(0), 3);
+        Assert.Equal(1.0, Conductor.BuildupEnvelope(Conductor.BuildupSeconds), 3);
+        Assert.Equal(1.0, Conductor.BuildupEnvelope(Conductor.BuildupSeconds * 5), 3); // clamps
+        Assert.True(Conductor.BuildupEnvelope(60) < 0.05);                              // near-silent first minute
+        Assert.True(Conductor.BuildupEnvelope(150) < Conductor.BuildupEnvelope(300));   // monotonic rise
+    }
+
+    [Fact]
+    public void Buildup_Starts_Sparse_And_Empty_Then_Fills_To_Full()
+    {
+        var start = Conductor.BuildupSpec(Spec(), 0, Lo, Hi);
+        var end   = Conductor.BuildupSpec(Spec(), Conductor.BuildupSeconds, Lo, Hi);
+
+        Assert.True(start.Density < 0.10);          // huge note spacing at the very start
+        Assert.True(end.Density > start.Density);   // fills in
+        // Layers assemble: nothing but the base pulse at the start; full texture by the end.
+        Assert.DoesNotContain(BeatLayer.Melody, start.Layers);
+        Assert.DoesNotContain(BeatLayer.Marimba, start.Layers);
+        Assert.Contains(BeatLayer.Pulse, start.Layers);
+        Assert.Contains(BeatLayer.Melody, end.Layers);
+        Assert.Contains(BeatLayer.Chime, end.Layers);
+        Assert.Contains(BeatLayer.Marimba, end.Layers);
+    }
+
     [Fact]
     public void BpmRange_Returns_The_Preset_Window()
     {

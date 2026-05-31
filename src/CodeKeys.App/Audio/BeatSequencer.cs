@@ -47,6 +47,9 @@ public sealed class BeatSequencer : ISampleProvider
     private int _loopCount;             // loop index → seeds the per-loop back-beat variation
     private double _timeScale = 1.0;    // compresses the arc clock for quick auditioning (1 = real time)
     private double _sensitivity = 1.25; // user reactivity multiplier (1 = baseline; default +25%)
+    private bool _buildup;              // "Buildup" mode: a slow ~10-min near-silent → full crescendo
+    private float _buildupGain = 1.0f;  // output crescendo gain in buildup (1 = normal)
+    private double _noteFill = 1.0;     // note-fill factor passed to BeatPattern (1 = full; <1 = sparse)
     private Scheduled[] _schedule = Array.Empty<Scheduled>();
     private long _loopLen = 1;
     private long _playhead;
@@ -69,8 +72,20 @@ public sealed class BeatSequencer : ISampleProvider
         lock (_gate)
         {
             var (lo, hi) = SignalsToBeat.BpmRange(spec.Preset);
-            // dt = 0 → tempo unchanged; this just applies the arc's opening (establish) layers/density.
-            _spec = Conductor.Step(spec, _userArousal, elapsedSeconds: 0, dtSeconds: 0, lo, hi, _sensitivity);
+            if (_buildup)
+            {
+                _spec = Conductor.BuildupSpec(spec, elapsedSeconds: 0, lo, hi);
+                double e0 = Conductor.BuildupEnvelope(0);
+                _buildupGain = (float)(0.05 + 0.95 * e0);
+                _noteFill = e0;
+            }
+            else
+            {
+                // dt = 0 → tempo unchanged; just applies the arc's opening (establish) layers/density.
+                _spec = Conductor.Step(spec, _userArousal, elapsedSeconds: 0, dtSeconds: 0, lo, hi, _sensitivity);
+                _buildupGain = 1.0f;
+                _noteFill = 1.0;
+            }
             _sessionSamples = 0;
             _loopCount = 0;
             BakeBank(_spec);
@@ -114,6 +129,17 @@ public sealed class BeatSequencer : ISampleProvider
     {
         get { lock (_gate) return _sensitivity; }
         set { lock (_gate) _sensitivity = Math.Max(0.0, value); }
+    }
+
+    /// <summary>
+    /// "Buildup" mode: bypass the adaptive thermostat and run a slow ~10-minute crescendo instead —
+    /// near-silent and sparse at first, gradually assembling the full beat (volume, density, layers,
+    /// and the melody all build). Toggling it restarts the build from the top.
+    /// </summary>
+    public bool Buildup
+    {
+        get { lock (_gate) return _buildup; }
+        set { lock (_gate) { _buildup = value; _sessionSamples = 0; _loopCount = 0; } }
     }
 
     private void BakeBank(BeatSpec spec)
@@ -170,7 +196,7 @@ public sealed class BeatSequencer : ISampleProvider
 
     private void BuildSchedule()
     {
-        var hits = BeatPattern.Build(_spec, _loopCount);
+        var hits = BeatPattern.Build(_spec, _loopCount, _noteFill);
         int steps = _spec.LoopBars * 16;
         double samplesPerStep = 60.0 / _spec.Bpm / 4.0 * _rate;
         _loopLen = Math.Max(1, (long)(steps * samplesPerStep));
@@ -210,7 +236,7 @@ public sealed class BeatSequencer : ISampleProvider
                     if (av.Pos >= av.Data.Length) _active.RemoveAt(v);
                     else _active[v] = av;
                 }
-                buffer[offset + i] = sample;
+                buffer[offset + i] = sample * _buildupGain; // _buildupGain is 1.0 outside buildup mode
 
                 _sessionSamples++;
 
@@ -224,7 +250,20 @@ public sealed class BeatSequencer : ISampleProvider
                     double elapsed = _sessionSamples / (double)_rate * _timeScale; // arc clock (demo-scalable)
                     double dt = _loopLen / (double)_rate;                          // real time → ramp stays gentle
                     var (lo, hi) = SignalsToBeat.BpmRange(_spec.Preset);
-                    _spec = Conductor.Step(_spec, _userArousal, elapsed, dt, lo, hi, _sensitivity);
+                    if (_buildup)
+                    {
+                        // Time-driven crescendo: assemble the beat over ~10 min (volume + notes + layers).
+                        _spec = Conductor.BuildupSpec(_spec, elapsed, lo, hi);
+                        double e = Conductor.BuildupEnvelope(elapsed);
+                        _buildupGain = (float)(0.05 + 0.95 * e);
+                        _noteFill = e;
+                    }
+                    else
+                    {
+                        _spec = Conductor.Step(_spec, _userArousal, elapsed, dt, lo, hi, _sensitivity);
+                        _buildupGain = 1.0f;
+                        _noteFill = 1.0;
+                    }
                     _loopCount++;
                     BuildSchedule(); // reuses the baked bank (scale/root unchanged)
                 }

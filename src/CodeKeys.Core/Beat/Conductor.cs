@@ -29,6 +29,9 @@ public static class Conductor
     public const double SlewPerSec = 0.004;  // max arousal change per second (very gentle ramp)
     public const double ResponsivenessFullAt = 300; // seconds: adaptation fades IN slowly from the base beat
 
+    // "Buildup" mode: a slow, near-silent → full crescendo over this many seconds (a separate setting).
+    public const double BuildupSeconds = 600; // 10 minutes
+
     // session-arc phase boundaries, in seconds
     public const double EstablishUntil   = 120;  // 0–2 min: pad + pulse only, sparse
     public const double StatementUntil   = 360;  // 2–6 min: the melody enters
@@ -113,6 +116,48 @@ public static class Conductor
         if (phase >= Phase.Statement)   layers.Add(BeatLayer.Melody);
         if (phase >= Phase.Statement)   layers.Add(BeatLayer.Chime);   // sparkle once the melody is in
         if (phase >= Phase.Development) layers.Add(BeatLayer.Marimba);
+
+        return current with { Bpm = bpm, Density = density, Layers = layers.ToArray() };
+    }
+
+    // ---- "Buildup" mode: a long, deliberate crescendo (not the adaptive thermostat) ----
+
+    /// <summary>
+    /// The buildup progress envelope 0..1 over <see cref="BuildupSeconds"/>. Smoothstep, so it's
+    /// barely-there at the very start and eases to full — a slow, song-like rise you mostly *feel*.
+    /// </summary>
+    public static double BuildupEnvelope(double elapsedSeconds)
+    {
+        double p = Clamp(elapsedSeconds / BuildupSeconds, 0, 1);
+        return p * p * (3 - 2 * p);
+    }
+
+    /// <summary>
+    /// The beat spec for "buildup" mode at <paramref name="elapsedSeconds"/>: time-driven (ignores
+    /// arousal), assembling the texture over ~10 minutes. Density grows from almost nothing (huge
+    /// note spacing) to a full-but-calm groove, voices enter progressively, and the tempo lifts a
+    /// little — the renderer also rides an output crescendo + a note-fill factor on top of this.
+    /// </summary>
+    public static BeatSpec BuildupSpec(BeatSpec current, double elapsedSeconds, int bpmLo, int bpmHi)
+    {
+        double e = BuildupEnvelope(elapsedSeconds);
+
+        // Tempo rises gently across the build — part of the crescendo (resting → a touch above).
+        double m = Clamp(0.35 + 0.30 * e, 0, 1);
+        int bpm = (int)Math.Round(bpmLo + (bpmHi - bpmLo) * m, MidpointRounding.AwayFromZero);
+
+        // Note density: almost nothing at first → full-but-calm.
+        double density = Clamp(0.04 + 0.66 * e, 0.04, 0.85);
+
+        // Voices assemble progressively (Pulse/Ghost are the kept base; Pulse is gated to a sparse
+        // heartbeat early via the renderer's note-fill factor).
+        var layers = current.Layers
+            .Where(l => l is not (BeatLayer.Pad or BeatLayer.Melody or BeatLayer.Marimba or BeatLayer.Chime))
+            .ToList();
+        if (e > 0.05) layers.Add(BeatLayer.Pad);
+        if (e > 0.30) layers.Add(BeatLayer.Melody);
+        if (e > 0.50) layers.Add(BeatLayer.Chime);
+        if (e > 0.65) layers.Add(BeatLayer.Marimba);
 
         return current with { Bpm = bpm, Density = density, Layers = layers.ToArray() };
     }

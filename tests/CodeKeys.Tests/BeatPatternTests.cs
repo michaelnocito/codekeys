@@ -37,6 +37,22 @@ public class BeatPatternTests
     }
 
     [Fact]
+    public void Full_Intensity_Matches_The_Default()
+    {
+        // intensity 1.0 must be byte-identical to the default (no thinning, no extra randomness).
+        Assert.Equal(BeatPattern.Build(FullSpec(), 3), BeatPattern.Build(FullSpec(), 3, 1.0));
+    }
+
+    [Fact]
+    public void Low_Intensity_Thins_The_Melody()
+    {
+        int Melody(IReadOnlyList<BeatHit> h) => h.Count(x => x.Layer == BeatLayer.Melody);
+        var full   = BeatPattern.Build(FullSpec(), 0, 1.0);
+        var sparse = BeatPattern.Build(FullSpec(), 0, 0.1);
+        Assert.True(Melody(sparse) < Melody(full)); // buildup: melody fills in as intensity rises
+    }
+
+    [Fact]
     public void Back_Beat_Varies_Loop_To_Loop()
     {
         // Consecutive loops must differ — that's the per-loop variance (off-beats, marimba, fill).

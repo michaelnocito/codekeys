@@ -17,8 +17,11 @@ public static class BeatPattern
     /// the loop index — it seeds the per-loop variation, so consecutive loops differ (varying
     /// off-beats, marimba notes, and a periodic fill) instead of repeating dead. The quarter-note
     /// downbeat pulse stays constant, so the groove still "maintains the pulse".
+    /// <paramref name="intensity"/> (0..1, default 1 = full) is the note-fill factor used by
+    /// "buildup" mode: below 1 it thins the kick + melody so the texture starts sparse and fills in.
+    /// At 1.0 it is a no-op (and consumes no randomness), so normal playback is unchanged.
     /// </summary>
-    public static IReadOnlyList<BeatHit> Build(BeatSpec spec, int cycle = 0)
+    public static IReadOnlyList<BeatHit> Build(BeatSpec spec, int cycle = 0, double intensity = 1.0)
     {
         int steps = spec.LoopBars * 16;
         var scale = SignalsToBeat.ToScale(spec.Scale);
@@ -43,7 +46,13 @@ public static class BeatPattern
             if (Has(BeatLayer.Pulse))
             {
                 if (s % 4 == 0)
-                    hits.Add(new BeatHit(s, BeatLayer.Pulse, root, accentGain, swing));
+                {
+                    // Quarter-note anchor. In buildup (intensity<1) the bar's first kick always
+                    // plays, but the other quarters fill in as intensity rises — a sparse heartbeat
+                    // that grows into a steady pulse. At intensity 1.0 this is a no-op (always plays).
+                    if (intensity >= 1.0 || s % 16 == 0 || rng.Next() < intensity)
+                        hits.Add(new BeatHit(s, BeatLayer.Pulse, root, accentGain, swing));
+                }
                 else if (s % 2 == 0 && rng.Next() < spec.Density * 0.30)
                     hits.Add(new BeatHit(s, BeatLayer.Pulse, root, 0.5, swing));
             }
@@ -101,6 +110,8 @@ public static class BeatPattern
                 int barStart = bar * 16;
                 foreach (var mn in phrase.Notes)
                 {
+                    // Buildup: notes fill in as intensity rises (sparse → coherent melody). No-op at 1.0.
+                    if (intensity < 1.0 && rng.Next() >= intensity) continue;
                     int step = barStart + mn.Step;
                     double swing = (step % 2 == 1) ? spec.Swing : 0.0;
                     double gain = accents.Contains(step) ? Math.Min(1.0, mn.Gain + 0.1) : mn.Gain;
