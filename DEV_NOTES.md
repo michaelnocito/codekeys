@@ -182,6 +182,25 @@ an **instrument change**, not a behavior change:
   (dormant), so they're easy to bring back if Mike wants.
 - So the active bed = **Pad (warmth) + Pulse/Ghost (drums) + Bass (body)**.
 
+### Deep bass + splashes + declutter (2026-05-31) — refines the above
+Mike: drop the bass an octave + long resonance ("booooommm"); the pad sounded like
+a low guitar-strum chord → **remove it**; keep only low bass + drum hits driving;
+add *rare* subtle "splash" appearances for variety but NOT instruments riding the
+beat; he fixates on the **highest treble** (researched: high/bright timbre + sharp
+transients capture attention involuntarily — `docs/sound-design.md`). Changes:
+- **Bass**: now `root-12` (~73 Hz, above the ~45 Hz floor), **pure sine, long decay
+  (Decay 1.8s)** = deep resonant boom; on the half-bar (steady driver). It's part of
+  the Focused preset base now (always on with the kick).
+- **Pad removed** from the active bed (conductor filters it; code dormant).
+- **New `BeatLayer.Splash`**: a rare (~22%/loop), soft, **dark mid-low** one-off
+  (WarmPad, slow attack, no sharp transient, never high) — an appearance, not a
+  layer. Conductor adds it from the Statement phase / buildup e>0.5.
+- **UI decluttered**: removed the Mood picker (locked to Focused), Reactivity slider,
+  and Buildup toggle from the screen (properties/code kept — easy to restore). Kept
+  Sound picker, Keystrokes/Beat toggles, the Demo toggle, volume hint.
+- Active bed now: **deep Bass + Pulse/Ghost drums**, with occasional Splashes. No
+  Pad, no high tones. Warmth still scales via drum density (conductor).
+
 ### NEXT (after Mike's ear test)
 - **Re-tune by ear** the consts in `Conductor.cs`; `_keysLevel`/`_bedLevel` in
   `AudioEngine.cs`. Bass knobs: register (`DegreeToMidi(root, …)` — go root-12 for

@@ -159,8 +159,9 @@ public sealed class BeatSequencer : ISampleProvider
         // so a layer turning on mid-session never synthesizes on the audio thread.
         Put(BeatLayer.Pulse, root);
         Put(BeatLayer.Ghost, root + 24);
-        foreach (int deg in new[] { 0, 2, 4 }) Put(BeatLayer.Pad, scale.DegreeToMidi(root, deg));
-        foreach (int deg in new[] { 0, 4 }) Put(BeatLayer.Bass, scale.DegreeToMidi(root, deg));     // warm low body
+        foreach (int deg in new[] { 0, 2, 4 }) Put(BeatLayer.Pad, scale.DegreeToMidi(root, deg));      // chord (unused)
+        foreach (int deg in new[] { 0, 4 }) Put(BeatLayer.Bass, scale.DegreeToMidi(root - 12, deg));   // deep low boom
+        foreach (int deg in new[] { 0, 2, 4 }) Put(BeatLayer.Splash, scale.DegreeToMidi(root, deg));   // rare dark splash
         foreach (int deg in new[] { 0, 2, 4 }) Put(BeatLayer.Chime, scale.DegreeToMidi(root + 24, deg)); // high sparkle (unused)
         for (int d = 0; d < span; d++)
         {
@@ -180,10 +181,16 @@ public sealed class BeatSequencer : ISampleProvider
                                 new Envelope { Attack = 0.06, Decay = 0.5, Sustain = 0.6, Release = 0.9 },
                                 holdSeconds: 1.2, gain: 0.35f),
             BeatLayer.Marimba => InstrumentFactory.CreateMarimba(f, _rate),
-            // Warm low bass — sustained pad-ish body, the heart of the "blanket". No high content.
-            BeatLayer.Bass => SynthVoiceFactory.CreateTone(f, _rate, Waveform.WarmPad,
-                                new Envelope { Attack = 0.02, Decay = 0.35, Sustain = 0.5, Release = 0.5 },
-                                holdSeconds: 0.35, gain: 0.50f),
+            // Deep low boom — pure sine, long resonant decay (the "boooommm"). Sits ~73 Hz, above the
+            // ~45 Hz floor so it stays audible/clean and not physically intrusive.
+            BeatLayer.Bass => SynthVoiceFactory.CreateTone(f, _rate, Waveform.Sine,
+                                new Envelope { Attack = 0.005, Decay = 1.8, Sustain = 0.0, Release = 0.3 },
+                                holdSeconds: 0.0, gain: 0.60f),
+            // Splash — a rare, dark, soft mid-low appearance. Slow attack (no sharp transient) and
+            // no high content, so it adds variety without capturing attention (per the research).
+            BeatLayer.Splash => SynthVoiceFactory.CreateTone(f, _rate, Waveform.WarmPad,
+                                new Envelope { Attack = 0.05, Decay = 0.5, Sustain = 0.3, Release = 0.6 },
+                                holdSeconds: 0.25, gain: 0.32f),
             // Soft, ambient melody — gentle fade-in + long tail so it floats behind the work instead
             // of plucking to the front (same WarmPad tone Mike likes, just sat well back).
             BeatLayer.Melody => SynthVoiceFactory.CreateTone(f, _rate, Waveform.WarmPad,

@@ -57,19 +57,13 @@ public static class BeatPattern
                     hits.Add(new BeatHit(s, BeatLayer.Pulse, root, 0.5, swing));
             }
 
-            // Bass: low, warm root-anchored notes — the body of the "blanket". Mostly the root with
-            // an occasional fifth; an extra note appears when it's fuller (warmer). Low register, no
-            // high tones. Density (= the conductor's warmth) drives how full it gets.
-            if (Has(BeatLayer.Bass))
+            // Bass: a deep low boom on the half-bar (steady, driving), mostly the root with an
+            // occasional fifth — an octave below the root for body. Long resonance is in the voice.
+            if (Has(BeatLayer.Bass) && s % 8 == 0)
             {
-                if (s % 8 == 0)
-                {
-                    int deg = rng.Next() < 0.25 ? 4 : 0; // mostly root, sometimes the fifth
-                    int midi = scale.DegreeToMidi(root, deg);
-                    hits.Add(new BeatHit(s, BeatLayer.Bass, midi, accents.Contains(s) ? 0.55 : 0.45, swing));
-                }
-                else if (s % 4 == 0 && rng.Next() < spec.Density * 0.5)
-                    hits.Add(new BeatHit(s, BeatLayer.Bass, root, 0.4, swing));
+                int deg = rng.Next() < 0.25 ? 4 : 0; // mostly root, sometimes the fifth
+                int midi = scale.DegreeToMidi(root - 12, deg);
+                hits.Add(new BeatHit(s, BeatLayer.Bass, midi, accents.Contains(s) ? 0.6 : 0.5, swing));
             }
 
             // Marimba: density-driven scale notes on the 8th-note grid (varies per loop via the seed).
@@ -103,6 +97,20 @@ public static class BeatPattern
             hits.Add(new BeatHit(steps - 2, BeatLayer.Pulse, root, 0.55, SwingAt(steps - 2)));
             if (Has(BeatLayer.Ghost))
                 hits.Add(new BeatHit(steps - 1, BeatLayer.Ghost, root + 24, 0.30, SwingAt(steps - 1)));
+        }
+
+        // Splash: a rare, soft, dark one-off for variety — an "appearance", not a layer that rides
+        // the beat. One note at most per loop, on a beat, in the mid-low register with a slow attack.
+        // High/bright sounds and sharp transients capture focus (auditory-salience research), so this
+        // deliberately avoids both. Varies per loop via the cycle seed.
+        if (Has(BeatLayer.Splash) && rng.Next() < 0.22)
+        {
+            int bar = (int)(rng.Next() * spec.LoopBars);
+            int beat = new[] { 0, 4, 8, 12 }[(int)(rng.Next() * 4)];
+            int step = bar * 16 + beat;
+            int[] tones = { 0, 2, 4 };
+            int deg = tones[(int)(rng.Next() * tones.Length)];
+            hits.Add(new BeatHit(step, BeatLayer.Splash, scale.DegreeToMidi(root, deg), 0.30, SwingAt(step)));
         }
 
         // Melody: a one-bar motif laid out per bar as call-and-response. Even bars state the

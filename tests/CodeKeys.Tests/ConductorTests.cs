@@ -149,21 +149,25 @@ public class ConductorTests
     }
 
     [Fact]
-    public void Step_In_Establish_Is_Just_The_Base_No_Bass_No_High_Tones()
+    public void Step_Establish_Is_Bass_And_Drums_No_Splash_No_Chord_No_High_Tones()
     {
         var next = Conductor.Step(Spec(), 0.6, elapsedSeconds: 10, dtSeconds: 5, Lo, Hi);
-        Assert.DoesNotContain(BeatLayer.Bass, next.Layers);
+        Assert.Contains(BeatLayer.Pulse, next.Layers);        // drums
+        Assert.Contains(BeatLayer.Bass, next.Layers);         // steady low body, always on
+        Assert.DoesNotContain(BeatLayer.Splash, next.Layers); // splashes come later
+        Assert.DoesNotContain(BeatLayer.Pad, next.Layers);    // no chord
         AssertNoHighTones(next.Layers);
-        Assert.Contains(BeatLayer.Pulse, next.Layers); // base drums stay
     }
 
     [Fact]
-    public void Step_From_Statement_Adds_Bass_And_Never_High_Tones()
+    public void Step_From_Statement_Adds_Splash_Keeps_Bass_No_Chord_No_High_Tones()
     {
         foreach (var t in new[] { 200.0, 700.0, 2000.0 }) // statement, development, flow
         {
             var next = Conductor.Step(Spec(), 0.6, elapsedSeconds: t, dtSeconds: 5, Lo, Hi);
             Assert.Contains(BeatLayer.Bass, next.Layers);
+            Assert.Contains(BeatLayer.Splash, next.Layers);
+            Assert.DoesNotContain(BeatLayer.Pad, next.Layers);
             AssertNoHighTones(next.Layers);
         }
     }
@@ -212,12 +216,13 @@ public class ConductorTests
 
         Assert.True(start.Density < 0.10);          // huge note spacing at the very start
         Assert.True(end.Density > start.Density);   // fills in
-        // Layers assemble: just the base pulse at the start; warm pad+bass by the end, no high tones.
-        Assert.DoesNotContain(BeatLayer.Pad, start.Layers);
+        // Layers assemble: just the base pulse at the start; bass + splashes by the end, no chord/high tones.
         Assert.DoesNotContain(BeatLayer.Bass, start.Layers);
+        Assert.DoesNotContain(BeatLayer.Splash, start.Layers);
         Assert.Contains(BeatLayer.Pulse, start.Layers);
-        Assert.Contains(BeatLayer.Pad, end.Layers);
         Assert.Contains(BeatLayer.Bass, end.Layers);
+        Assert.Contains(BeatLayer.Splash, end.Layers);
+        Assert.DoesNotContain(BeatLayer.Pad, end.Layers);
         AssertNoHighTones(end.Layers);
     }
 

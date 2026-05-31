@@ -109,12 +109,13 @@ public static class Conductor
         };
         double density = Clamp((0.28 + 0.42 * next) * arcMult, 0.12, 0.85);
 
-        // Warm low "blanket": the arc brings in the Bass; pad/pulse/ghost are the kept base. No high
-        // tones (Melody/Marimba/Chime are filtered out — they pulled focus).
+        // Low blanket: deep Bass + drums (Pulse/Ghost) are the steady foundation; rare Splashes add
+        // variety from the Statement phase on. No Pad chord and no high tones (filtered out).
         var layers = current.Layers
-            .Where(l => l is not (BeatLayer.Melody or BeatLayer.Marimba or BeatLayer.Chime or BeatLayer.Bass))
+            .Where(l => l is not (BeatLayer.Pad or BeatLayer.Melody or BeatLayer.Marimba or BeatLayer.Chime or BeatLayer.Splash))
             .ToList();
-        if (phase >= Phase.Statement) layers.Add(BeatLayer.Bass);
+        if (!layers.Contains(BeatLayer.Bass)) layers.Add(BeatLayer.Bass); // the steady low body, always
+        if (phase >= Phase.Statement) layers.Add(BeatLayer.Splash);
 
         return current with { Bpm = bpm, Density = density, Layers = layers.ToArray() };
     }
@@ -148,13 +149,13 @@ public static class Conductor
         // Note density: almost nothing at first → full-but-calm.
         double density = Clamp(0.04 + 0.66 * e, 0.04, 0.85);
 
-        // Voices assemble progressively into the warm blanket (Pulse/Ghost are the kept base; Pulse is
-        // gated to a sparse heartbeat early via the renderer's note-fill factor). No high tones.
+        // Voices assemble progressively (Pulse is the base, gated to a sparse heartbeat early via the
+        // renderer's note-fill factor): deep Bass comes in, then rare Splashes. No Pad, no high tones.
         var layers = current.Layers
-            .Where(l => l is not (BeatLayer.Pad or BeatLayer.Melody or BeatLayer.Marimba or BeatLayer.Chime or BeatLayer.Bass))
+            .Where(l => l is not (BeatLayer.Pad or BeatLayer.Melody or BeatLayer.Marimba or BeatLayer.Chime or BeatLayer.Bass or BeatLayer.Splash))
             .ToList();
-        if (e > 0.05) layers.Add(BeatLayer.Pad);
-        if (e > 0.30) layers.Add(BeatLayer.Bass);
+        if (e > 0.10) layers.Add(BeatLayer.Bass);
+        if (e > 0.50) layers.Add(BeatLayer.Splash);
 
         return current with { Bpm = bpm, Density = density, Layers = layers.ToArray() };
     }
