@@ -42,3 +42,65 @@ One task at a time. Audio engine first, global hook later, UI last.
   key → sound lookup.
 - Not Electron.
 - Generative/adaptive (Endel-style) beds are **v2**; v1 ambient = looped file only.
+
+---
+
+## v2 — Adaptive / biofeedback music engine (vision, captured 2026-05-30)
+
+Mike's direction: the app should **generate music for you** from (1) your
+keystrokes (within the existing privacy guidelines) and (2) optional biofeedback
+(heart rate). Goal: gently keep the user in a flow / "wu wei" state — efficient,
+low-tension, sustained positive progress.
+
+### Research grounding (so we don't ship pseudoscience)
+- **Iso principle** (music therapy): don't jump straight to the target mood —
+  *match* the user's current arousal, then *gradually* lead it toward the target.
+  An agitated person resists sudden calm music but will follow a slow ramp. → our
+  tempo/intensity changes must be **slow and gradual** (validates Mike's "changes
+  too fast" note). Sources in docs/sound-design.md.
+- **Yerkes-Dodson / flow**: performance peaks at an *optimal* arousal (inverted-U);
+  flow ≈ the peak. Too fast/intense → stress; too slow → boredom/disengagement.
+  So the target is a **flow band**, not "always calmer." Tempo is the main lever
+  (faster ≈ more arousal, >~94 BPM raises it).
+- **HONESTY CAVEAT — heart-rate entrainment is weak**: rigorous studies find HR
+  does *not* reliably sync to musical tempo. So we must NOT claim "the beat slows
+  your heart." Legit mechanism = psychological arousal regulation + attention +
+  iso-principle leading. "Brain-wavelength"/binaural-beat framing = avoid.
+
+### The adaptive "conductor" (buildable now, no hardware)
+A layer above the beat that merges the earlier Phase-2 session-arc with arousal
+regulation. Inputs already exist in `SignalsCollector` (rate, gap variance,
+backspaces, punctuation — privacy-safe, no characters).
+- **Read arousal proxy, not raw speed.** Rising arousal/agitation = speeding up
+  *and/or* rising variance/backspaces (bursty, erratic). Disengagement = slowing,
+  long pauses, low variance. (Pure fast+steady = flow → leave it alone.)
+- **Thermostat toward a flow band** via the iso principle: nudge BPM/density in
+  **small steps over many loop cycles** (e.g. ≤1-2 BPM per loop), never jumps.
+  - Arousal climbing → gently ease tempo/density down to settle them.
+  - Engagement dropping → gently lift tempo/density to re-activate them.
+- **Compose with the melody arc**: the motif still develops over ~15-20 min
+  (emerge → develop → resolve); the thermostat modulates intensity within it.
+- **Fix carried over**: `BeatSequencer.UpdateGroove` resets `_cycle=0` every 3s —
+  must preserve session time or the arc/ramp keeps restarting.
+
+### Heart-rate biofeedback
+- **v2a — BLE heart-rate strap (RECOMMENDED FIRST):** standard BLE GATT Heart
+  Rate Service; Windows reads it directly (no Mac, no Apple dev account). Proves
+  the whole biometric→beat loop. "Play my heartbeat" = sonify each beat as a kick
+  / seed tempo from resting HR. Fun mode.
+- **v2b — Apple Watch:** NO web/backend API and HealthKit is not a live stream.
+  Near-real-time HR requires a **native watchOS app running a workout session +
+  streaming HealthKit query**, relaying over LAN to the Windows app (the OBS
+  "Health Data Server" pattern). Needs a Mac + Xcode + Apple Developer account.
+  Bigger lift → after v2a.
+
+### Cross-platform reality
+- The **core (system-wide keystroke capture)** cannot run on iOS — iOS sandboxes
+  apps; no global key hook. Home stays **Windows** (macOS possible via CGEventTap;
+  not iOS). An iOS/watchOS app's only role here = the **HR sensor bridge** (v2b).
+
+### Smaller captured items
+- **Volume follows the OS** (don't make users set two sliders). Windows already
+  scales per-app output by the system master + per-app fader, so: drop the app's
+  redundant internal volume slider, lean on the OS mixer, keep mute/panic hotkey.
+  (Optional: mirror the endpoint volume in the UI via NAudio `AudioEndpointVolume`.)
