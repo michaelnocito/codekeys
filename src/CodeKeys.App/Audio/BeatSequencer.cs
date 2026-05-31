@@ -216,12 +216,12 @@ public sealed class BeatSequencer : ISampleProvider
                                 new Envelope { Attack = 0.002, Decay = 1.4, Sustain = 0.0, Release = 0.1 },
                                 holdSeconds: 0.0, gain: 0.40f),
             BeatLayer.Ghost => PercussionFactory.CreateTap(f, _rate, decaySeconds: 0.045, noiseAmount: 0.25),
-            // Tibetan singing bowl: a long held tone in the background — 3 s climb, 12 s sustain
-            // plateau, ~15 s slow descend = 30 s total. The bowl ascends evenly into the spotlight,
-            // holds at the top, then gracefully unwinds. It sits BEHIND the bass (the bass is the
-            // focus); the bowl is a consistent atmospheric presence, not the lead voice.
+            // Tibetan singing bowl: shaped as an APPEARANCE — ascends in, holds briefly, then has
+            // a long noticeable fade-out trail. ~10 s total so each appearance is roughly 2 measures
+            // (at 66 BPM, 2 bars ≈ 7 s) plus a graceful trailing tail. The bass is the focus; the
+            // bowl makes appearances over it.
             BeatLayer.Bowl => InstrumentFactory.CreateSingingBowl(f, _rate,
-                                durationSeconds: 30.0, gain: 0.60f, attack: 3.0, sustain: 12.0),
+                                durationSeconds: 10.0, gain: 0.60f, attack: 1.5, sustain: 3.5),
             _ => SynthVoiceFactory.CreateTone(f, _rate, Waveform.Sine, Envelope.Pluck)
         };
         return buf.Samples;

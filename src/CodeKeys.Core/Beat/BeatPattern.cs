@@ -81,6 +81,12 @@ public static class BeatPattern
             if (Has(BeatLayer.Bass))
             {
                 int pattern = cycle % 5;
+                // Root chakra: only the long-sustain patterns (1 and 4). Research-grounded: root
+                // wants "deep tones felt as much as heard, slow grounding bass." We anchor each
+                // loop in the long-lingering bass instead of the lighter half-bar patterns.
+                bool isRootChakra = spec.Preset == BeatPreset.Root;
+                if (isRootChakra) pattern = (cycle % 2 == 0) ? 1 : 4;
+
                 int halfIdx = (s / 8) % 2;     // 0 = beat 1 of bar, 1 = beat 3 of bar
                 int barIdx = s / 16;
 
@@ -109,6 +115,8 @@ public static class BeatPattern
                     int baseMidi = scale.DegreeToMidi(root - 12, deg);
                     int midi = useLong ? baseMidi + LongBassOffset : baseMidi;
                     double gain = accents.Contains(s) ? 0.6 : (halfIdx == 0 ? 0.55 : 0.45);
+                    // Root chakra: 25 % bass boost so the grounding low end is the star of the show.
+                    if (isRootChakra) gain = Math.Min(1.0, gain * 1.25);
                     hits.Add(new BeatHit(s, BeatLayer.Bass, midi, gain, swing));
                 }
 
@@ -153,33 +161,32 @@ public static class BeatPattern
                 hits.Add(new BeatHit(steps - 1, BeatLayer.Ghost, root + 24, 0.30, SwingAt(steps - 1)));
         }
 
-        // Bowl: a Tibetan singing bowl rings on the downbeat of every loop (Tibetan Beat), and
-        // chakras get a second strike at the loop's midpoint so the rings overlap into a continuous
-        // shimmer (Mike: "more of them, especially in the chakra ones; can dominate the base more").
-        // The bowl voice itself fades in smoothly (350ms smoothstep) so the strike never crashes in.
+        // Bowl: makes "appearances" of ~2 measures (the bowl itself is a 10 s envelope: 1.5 s
+        // ascend → 3.5 s sustain → ~5 s noticeable trailing fade-away), then silence between
+        // appearances. The spacing varies with the spec's density:
+        //   dense  (up feel)   → strike every loop          (~14 s spacing → mostly appearances)
+        //   medium             → strike every other loop    (~29 s spacing → equal on/off)
+        //   sparse (calm)      → strike every 4 loops       (~58 s spacing → long silences)
+        // Bowl is well behind the bass — total summed peak ≈ ¼ bass — bass stars.
         if (Has(BeatLayer.Bowl))
         {
-            var chakraFreq = SignalsToBeat.ChakraBowlFreq(spec.Preset);
-            int primaryMidi;
-            if (chakraFreq.HasValue)
-                primaryMidi = SignalsToBeat.ChakraBowlMidi(spec.Preset);
-            else
+            // density → spacing in loops. Density 0.04 → 4, density 0.85 → 1. Clamped to [1, 4].
+            int spacingLoops = Math.Max(1, (int)Math.Round(4.5 - 4.5 * spec.Density));
+            if (cycle % spacingLoops == 0)
             {
-                int deg = rng.Next() < 0.30 ? 4 : 0;
-                primaryMidi = scale.DegreeToMidi(root, deg);
-            }
+                var chakraFreq = SignalsToBeat.ChakraBowlFreq(spec.Preset);
+                int primaryMidi;
+                if (chakraFreq.HasValue)
+                    primaryMidi = SignalsToBeat.ChakraBowlMidi(spec.Preset);
+                else
+                {
+                    int deg = rng.Next() < 0.30 ? 4 : 0;
+                    primaryMidi = scale.DegreeToMidi(root, deg);
+                }
 
-            // Strike 1 — bar 0 downbeat (every loop). Hit gain is low because the 12 s sustain
-            // plateau + 30 s buffer means 3-4 bowls overlap simultaneously (each normalized to 0.85
-            // peak). The 0.10 gain keeps the SUMMED bowl signal below the bass, so bass leads.
-            hits.Add(new BeatHit(0, BeatLayer.Bowl, primaryMidi, 0.10, 0));
-
-            // Strike 2 — chakras only, at the loop's midpoint. Even lower because it adds another
-            // overlapping bowl to the stack; the goal is consistent background presence, not volume.
-            if (chakraFreq.HasValue && spec.LoopBars >= 2)
-            {
-                int midStep = (spec.LoopBars / 2) * 16;
-                hits.Add(new BeatHit(midStep, BeatLayer.Bowl, primaryMidi, 0.08, 0));
+                // Bar 0 downbeat appearance. Hit gain dropped 50 % from 0.10 → 0.05 — bass is the
+                // star, the bowl is a soft consistent background presence.
+                hits.Add(new BeatHit(0, BeatLayer.Bowl, primaryMidi, 0.05, 0));
             }
         }
 

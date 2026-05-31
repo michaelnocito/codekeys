@@ -141,15 +141,8 @@ public sealed class MainWindow : Form
             Height = 42
         };
 
-        // Keystroke voicing locked to Midnight in this app. No picker — just a label.
-        var presetLabel = new Label
-        {
-            Text = "🌙  Keystrokes voiced as Midnight (deep beat)",
-            AutoSize = true,
-            Left = 16,
-            Top = 56,
-            ForeColor = SystemColors.GrayText
-        };
+        // Keystroke voicing is fixed for this app — no picker, no label. Focus is on the beat
+        // templates (the chakra picker below); keystrokes are just the deep-beat blend.
         _presetPicker = new ComboBox { Visible = false }; // field still required by OnPresetChanged; kept hidden
 
         _keysToggle = new CheckBox { Text = "⌨  Keystrokes", Checked = true, AutoSize = true, Left = 16, Top = 92 };
@@ -224,7 +217,15 @@ public sealed class MainWindow : Form
             Left = 14,
             Top = 280
         };
-        beatVolSlider.ValueChanged += (_, _) => _engine.BedLevel = beatVolSlider.Value / 100f;
+        // Moving the beat slider sets the bed level AND auto-syncs the keys slider to half (bass
+        // is the star; keys sit at half the beat level by default). User can override the keys
+        // slider directly afterwards — only beat-slider moves drag it along.
+        beatVolSlider.ValueChanged += (_, _) =>
+        {
+            _engine.BedLevel = beatVolSlider.Value / 100f;
+            int autoKeys = beatVolSlider.Value / 2;
+            if (keysVolSlider.Value != autoKeys) keysVolSlider.Value = autoKeys;
+        };
 
         var volHint = new Label
         {
@@ -260,7 +261,6 @@ public sealed class MainWindow : Form
             ForeColor = SystemColors.GrayText
         };
 
-        Controls.Add(presetLabel);
         Controls.Add(_keysToggle);
         Controls.Add(_bedToggle);
         Controls.Add(chakraLabel);

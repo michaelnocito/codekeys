@@ -23,7 +23,9 @@ public static class SignalsToBeat
             // Chakra tunings — same low bass hum (D3 → D2 = ~73 Hz) and pulse as Focused, so the
             // bass character Mike likes is preserved. The Tibetan singing bowl is what varies, ringing
             // at the chakra's Solfeggio frequency (see ChakraBowlFreq).
-            [BeatPreset.Root]        = new(60, 72, BeatScale.MajorPentatonic, "D3", new[] { BeatLayer.Pulse }),
+            // Root chakra: slower tempo range (research: root = slow, grounding, "deep tones felt as
+            // much as heard"). Lower BPM lets the deep bass be more sustained / felt.
+            [BeatPreset.Root]        = new(54, 66, BeatScale.MajorPentatonic, "D3", new[] { BeatLayer.Pulse }),
             [BeatPreset.Sacral]      = new(60, 72, BeatScale.MajorPentatonic, "D3", new[] { BeatLayer.Pulse }),
             [BeatPreset.SolarPlexus] = new(60, 72, BeatScale.MajorPentatonic, "D3", new[] { BeatLayer.Pulse }),
             [BeatPreset.Heart]       = new(60, 72, BeatScale.MajorPentatonic, "D3", new[] { BeatLayer.Pulse }),
