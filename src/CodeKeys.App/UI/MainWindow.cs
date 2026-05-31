@@ -123,7 +123,7 @@ public sealed class MainWindow : Form
     private void BuildUi()
     {
         Text = "CodeKeys";
-        ClientSize = new Size(440, 230);
+        ClientSize = new Size(440, 340);
         StartPosition = FormStartPosition.CenterScreen;
         Font = new Font("Segoe UI", 9f);
         MaximizeBox = false;
@@ -172,14 +172,43 @@ public sealed class MainWindow : Form
         var resetButton = new Button { Text = "↺  Reset beat", AutoSize = true, Left = 260, Top = 122 };
         resetButton.Click += (_, _) => _beat.Reset();
 
+        // Per-layer levels (the relative mix). The master is the Windows volume mixer entry —
+        // these knobs let Mike dial keystrokes vs the beat against each other without leaving
+        // the system master out of his hands.
+        var keysVolLabel = new Label { Text = "⌨  Keystrokes level", AutoSize = true, Left = 16, Top = 162 };
+        var keysVolSlider = new TrackBar
+        {
+            Minimum = 0,
+            Maximum = 100,
+            Value = (int)Math.Round(_engine.KeysLevel * 100),
+            TickFrequency = 25,
+            Width = 408,
+            Left = 14,
+            Top = 182
+        };
+        keysVolSlider.ValueChanged += (_, _) => _engine.KeysLevel = keysVolSlider.Value / 100f;
+
+        var beatVolLabel = new Label { Text = "🥁  Beat level", AutoSize = true, Left = 16, Top = 230 };
+        var beatVolSlider = new TrackBar
+        {
+            Minimum = 0,
+            Maximum = 100,
+            Value = (int)Math.Round(_engine.BedLevel * 100),
+            TickFrequency = 25,
+            Width = 408,
+            Left = 14,
+            Top = 250
+        };
+        beatVolSlider.ValueChanged += (_, _) => _engine.BedLevel = beatVolSlider.Value / 100f;
+
         var volHint = new Label
         {
-            Text = "🔊  Volume follows Windows — adjust it from the taskbar volume / mixer.",
+            Text = "🔊  Overall volume follows Windows — these sliders adjust the relative mix.",
             AutoSize = false,
             Left = 16,
-            Top = 158,
+            Top = 296,
             Width = 408,
-            Height = 34,
+            Height = 18,
             ForeColor = SystemColors.GrayText
         };
 
@@ -212,6 +241,10 @@ public sealed class MainWindow : Form
         Controls.Add(_bedToggle);
         Controls.Add(demoToggle);
         Controls.Add(resetButton);
+        Controls.Add(keysVolLabel);
+        Controls.Add(keysVolSlider);
+        Controls.Add(beatVolLabel);
+        Controls.Add(beatVolSlider);
         Controls.Add(volHint);
         Controls.Add(_status);
         Controls.Add(heading);
