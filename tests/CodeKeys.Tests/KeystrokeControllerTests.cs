@@ -104,7 +104,8 @@ public class KeystrokeControllerTests
         c.OnKeyDown('A');               // 'A' now held
         Assert.Equal(1, p.PlayCount);
 
-        var other = PresetLibrary.ById("thock")!.Build(44100);
+        // Only Midnight is shipped now; the swap-clears-held semantics is what matters here.
+        var other = PresetLibrary.Default.Build(44100);
         c.SetVoices(other.Map, other.Voices);
 
         // Held set was cleared, so 'A' sounds again immediately through the new preset.

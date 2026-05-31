@@ -150,13 +150,13 @@ public class ConductorTests
     }
 
     [Fact]
-    public void Step_Start_Has_Bass_Hum_And_Pulse_No_Other_Voices()
+    public void Step_Start_Has_Bass_Pulse_And_Bowl_No_Other_Voices()
     {
-        // From t=0 the deep Bass hum is the foundation (Mike's favourite) + Pulse for accents.
-        // Ghost taps and Splashes wait their turn in the additive build.
+        // From t=0 in Tibetan Beat (Focused) mode: Bass hum + Pulse + Bowl. Ghost/Splash wait.
         var next = Conductor.Step(Spec(), 0.6, elapsedSeconds: 0, dtSeconds: 5, Lo, Hi);
         Assert.Contains(BeatLayer.Pulse, next.Layers);
         Assert.Contains(BeatLayer.Bass, next.Layers);
+        Assert.Contains(BeatLayer.Bowl, next.Layers); // Tibetan Beat has bowls from the start
         Assert.DoesNotContain(BeatLayer.Ghost, next.Layers);
         Assert.DoesNotContain(BeatLayer.Splash, next.Layers);
         Assert.DoesNotContain(BeatLayer.Pad, next.Layers); // never the chord
@@ -167,7 +167,8 @@ public class ConductorTests
     [Fact]
     public void Step_Voices_Enter_One_At_A_Time_Across_The_Build()
     {
-        // Bass + Pulse from the start; Ghost taps at >0.30 envelope; Splashes at >0.70.
+        // Bass + Pulse + Bowl from the start (Tibetan Beat); Ghost taps at >0.30 envelope;
+        // Splashes at >0.70.
         var t0   = Conductor.Step(Spec(), 0.6, 0,    5, Lo, Hi);
         var t450 = Conductor.Step(Spec(), 0.6, 450,  5, Lo, Hi); // envelope 0.5625
         var tEnd = Conductor.Step(Spec(), 0.6, Conductor.BuildupSeconds, 5, Lo, Hi);
@@ -181,6 +182,7 @@ public class ConductorTests
         {
             Assert.Contains(BeatLayer.Pulse, spec.Layers); // accent throughout
             Assert.Contains(BeatLayer.Bass,  spec.Layers); // hum throughout (the foundation)
+            Assert.Contains(BeatLayer.Bowl,  spec.Layers); // bowls throughout (Tibetan Beat / chakras)
             Assert.DoesNotContain(BeatLayer.Pad, spec.Layers);
             AssertNoHighTones(spec.Layers);
         }
@@ -293,13 +295,14 @@ public class ConductorTests
     }
 
     [Fact]
-    public void Step_End_Of_Cycle_Returns_To_Foundation_Hum_And_Pulse()
+    public void Step_End_Of_Cycle_Returns_To_Foundation_Hum_Pulse_And_Bowl()
     {
-        // The end of the fall = back to the foundation: Bass hum + Pulse, with Ghost/Splash gone.
-        // Density drops to the floor so the schedule is very sparse.
+        // The end of the fall = back to the Tibetan Beat foundation: Bass + Pulse + Bowl,
+        // with the additive Ghost/Splash gone. Density drops to the floor so the schedule is sparse.
         var quiet = Conductor.Step(Spec(), 0.5, elapsedSeconds: Conductor.CycleSeconds, dtSeconds: 5, Lo, Hi);
         Assert.Contains(BeatLayer.Pulse, quiet.Layers);
         Assert.Contains(BeatLayer.Bass,  quiet.Layers); // hum persists across the cycle endpoints
+        Assert.Contains(BeatLayer.Bowl,  quiet.Layers); // bowl is part of the Tibetan Beat identity
         Assert.DoesNotContain(BeatLayer.Splash, quiet.Layers);
         Assert.DoesNotContain(BeatLayer.Ghost,  quiet.Layers);
         Assert.True(quiet.Density < 0.10);

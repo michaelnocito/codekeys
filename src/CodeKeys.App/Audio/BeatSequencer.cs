@@ -147,10 +147,10 @@ public sealed class BeatSequencer : ISampleProvider
         int root = NoteUtil.ParseNoteName(spec.Root);
         int span = scale.DegreeSpan(2);
 
-        void Put(BeatLayer layer, int midi, double? freqOverride = null)
+        void Put(BeatLayer layer, int midi, double? freqOverride = null, double? decayOverride = null)
         {
             var key = (layer, midi);
-            if (!_bank.ContainsKey(key)) _bank[key] = Bake(layer, midi, freqOverride);
+            if (!_bank.ContainsKey(key)) _bank[key] = Bake(layer, midi, freqOverride, decayOverride);
         }
 
         // Bake every voice the arc might enable (regardless of which layers are active right now),
@@ -158,7 +158,15 @@ public sealed class BeatSequencer : ISampleProvider
         Put(BeatLayer.Pulse, root);
         Put(BeatLayer.Ghost, root + 24);
         foreach (int deg in new[] { 0, 2, 4 }) Put(BeatLayer.Pad, scale.DegreeToMidi(root, deg));      // chord (unused)
-        foreach (int deg in new[] { 0, 4 }) Put(BeatLayer.Bass, scale.DegreeToMidi(root - 12, deg));   // deep low boom
+        // Bake TWO Bass variants per pitch — a mid-length default (~2s) and a long lingering one
+        // (~3.6s). The pattern picks among them for the playful "who leads how long" exchange.
+        foreach (int deg in new[] { 0, 4 })
+        {
+            int bMidi = scale.DegreeToMidi(root - 12, deg);
+            double bFreq = NoteUtil.MidiToFrequency(bMidi);
+            Put(BeatLayer.Bass, bMidi);                                                        // default ~2.0s
+            Put(BeatLayer.Bass, bMidi + BeatPattern.LongBassOffset, bFreq, decayOverride: 3.6); // long ~3.6s
+        }
         foreach (int deg in new[] { 0, 2, 4 }) Put(BeatLayer.Splash, scale.DegreeToMidi(root, deg));   // rare dark splash
         // Chakra presets tune the bowl to a specific Solfeggio Hz; others use scale degrees.
         var chakraFreq = SignalsToBeat.ChakraBowlFreq(spec.Preset);
@@ -175,7 +183,7 @@ public sealed class BeatSequencer : ISampleProvider
         }
     }
 
-    private float[] Bake(BeatLayer layer, int midi, double? freqOverride = null)
+    private float[] Bake(BeatLayer layer, int midi, double? freqOverride = null, double? decayOverride = null)
     {
         double f = freqOverride ?? NoteUtil.MidiToFrequency(midi);
         SampleBuffer buf = layer switch
@@ -188,10 +196,10 @@ public sealed class BeatSequencer : ISampleProvider
                                 new Envelope { Attack = 0.06, Decay = 0.5, Sustain = 0.6, Release = 0.9 },
                                 holdSeconds: 1.2, gain: 0.35f),
             BeatLayer.Marimba => InstrumentFactory.CreateMarimba(f, _rate),
-            // Deep low boom — pure sine, long resonant decay (the "boooommm"). Sits ~73 Hz, above the
-            // ~45 Hz floor so it stays audible/clean and not physically intrusive.
+            // Deep low boom — pure sine, long resonant decay. Decay is overridable so we can bake a
+            // short / mid / long variant per pitch for the playful "who leads how long" exchange.
             BeatLayer.Bass => SynthVoiceFactory.CreateTone(f, _rate, Waveform.Sine,
-                                new Envelope { Attack = 0.005, Decay = 1.8, Sustain = 0.0, Release = 0.3 },
+                                new Envelope { Attack = 0.005, Decay = decayOverride ?? 2.0, Sustain = 0.0, Release = 0.4 },
                                 holdSeconds: 0.0, gain: 0.60f),
             // Splash — a rare, dark, soft mid-low appearance. Slow attack (no sharp transient) and
             // no high content, so it adds variety without capturing attention (per the research).

@@ -10,66 +10,45 @@ public class PresetTests
     private const int Rate = 44100;
 
     [Fact]
-    public void Library_Has_The_Three_Starter_Presets()
+    public void Library_Is_Locked_To_Midnight()
     {
-        var ids = PresetLibrary.All.Select(p => p.Id).ToHashSet();
-        Assert.Contains("keyboard", ids);
-        Assert.Contains("pulse", ids);
-        Assert.Contains("thock", ids);
+        // Bowl Bass Keys ships with a single keystroke voicing — Midnight. The other presets
+        // (Pulse/Thock/Keyboard/AfterDark/Electric/GrandPiano/Rhodes/Marimba) are kept dormant
+        // in PresetLibrary.cs but not exposed via All / ById, so the app stays focused.
+        var ids = PresetLibrary.All.Select(p => p.Id).ToList();
+        Assert.Single(ids);
+        Assert.Equal("midnight", ids[0]);
     }
 
     [Fact]
-    public void Default_Is_The_Deep_Beat_Blend()
+    public void Default_Is_Midnight()
     {
         Assert.Equal("midnight", PresetLibrary.Default.Id);
     }
 
     [Fact]
-    public void Neon_Nights_Was_Removed()
+    public void ById_Is_Case_Insensitive_For_Midnight()
     {
-        Assert.Null(PresetLibrary.ById("neon-nights"));
-    }
-
-    [Fact]
-    public void ById_Is_Case_Insensitive()
-    {
-        Assert.NotNull(PresetLibrary.ById("PULSE"));
+        Assert.NotNull(PresetLibrary.ById("MIDNIGHT"));
+        Assert.NotNull(PresetLibrary.ById("midnight"));
         Assert.Null(PresetLibrary.ById("nope"));
     }
 
     [Fact]
-    public void Every_Built_In_Preset_Builds_And_Sounds_All_Keys()
+    public void Dormant_Presets_Are_Not_Exposed()
     {
-        foreach (var preset in PresetLibrary.All)
-        {
-            var baked = preset.Build(Rate);
-
-            foreach (var vk in KeyboardLayout.DefaultOrder)
-                Assert.NotNull(baked.Voices.Resolve(baked.Map.Resolve(vk)));
-
-            Assert.NotNull(baked.Voices.Resolve(baked.Map.Resolve(VirtualKey.Space)));
-            Assert.NotNull(baked.Voices.Resolve(baked.Map.Resolve(VirtualKey.Enter)));
-            Assert.NotNull(baked.Voices.Resolve(baked.Map.Resolve(VirtualKey.Back)));
-        }
+        foreach (var id in new[] { "pulse", "thock", "keyboard", "after-dark", "electric", "piano", "rhodes", "marimba", "neon-nights" })
+            Assert.Null(PresetLibrary.ById(id));
     }
 
     [Fact]
-    public void Library_Exposes_The_Full_Set()
+    public void Midnight_Builds_And_Sounds_All_Keys()
     {
-        // current three + two song packs + guitar + piano + two bonuses
-        var ids = PresetLibrary.All.Select(p => p.Id).ToList();
-        Assert.Equal(ids.Count, ids.Distinct().Count()); // ids unique
-        foreach (var id in new[] { "midnight", "pulse", "thock", "after-dark", "electric", "piano", "rhodes", "marimba" })
-            Assert.Contains(id, ids);
-    }
-
-    [Fact]
-    public void Pulse_Uses_A_Narrower_Pitch_Range_Than_Keyboard()
-    {
-        // Low-cognitive-load presets minimize pitch variation (near steady-state).
-        int keyboardNotes = PresetLibrary.ById("keyboard")!.Build(Rate).Voices.PitchedCount;
-        int pulseNotes = PresetLibrary.ById("pulse")!.Build(Rate).Voices.PitchedCount;
-        Assert.True(pulseNotes < keyboardNotes,
-            $"expected Pulse ({pulseNotes}) to use fewer distinct notes than Keyboard ({keyboardNotes})");
+        var baked = PresetLibrary.Default.Build(Rate);
+        foreach (var vk in KeyboardLayout.DefaultOrder)
+            Assert.NotNull(baked.Voices.Resolve(baked.Map.Resolve(vk)));
+        Assert.NotNull(baked.Voices.Resolve(baked.Map.Resolve(VirtualKey.Space)));
+        Assert.NotNull(baked.Voices.Resolve(baked.Map.Resolve(VirtualKey.Enter)));
+        Assert.NotNull(baked.Voices.Resolve(baked.Map.Resolve(VirtualKey.Back)));
     }
 }

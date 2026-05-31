@@ -123,7 +123,7 @@ public sealed class MainWindow : Form
 
     private void BuildUi()
     {
-        Text = "CodeKeys";
+        Text = "Bowl Bass Keys";
         ClientSize = new Size(440, 370);
         StartPosition = FormStartPosition.CenterScreen;
         Font = new Font("Segoe UI", 9f);
@@ -132,24 +132,22 @@ public sealed class MainWindow : Form
 
         var heading = new Label
         {
-            Text = "Type in any app — you'll hear it. This panel can stay minimized.",
+            Text = "Bowl Bass Keys  ·  relax as you type/code  ·  space clearing  ·  chakra vibing",
             Dock = DockStyle.Top,
             Padding = new Padding(14, 14, 14, 6),
             Height = 42
         };
 
-        var presetLabel = new Label { Text = "Sound", AutoSize = true, Left = 16, Top = 56 };
-        _presetPicker = new ComboBox
+        // Keystroke voicing locked to Midnight in this app. No picker — just a label.
+        var presetLabel = new Label
         {
-            DropDownStyle = ComboBoxStyle.DropDownList,
-            Left = 70,
-            Top = 52,
-            Width = 250
+            Text = "🌙  Keystrokes voiced as Midnight (deep beat)",
+            AutoSize = true,
+            Left = 16,
+            Top = 56,
+            ForeColor = SystemColors.GrayText
         };
-        foreach (var preset in PresetLibrary.All)
-            _presetPicker.Items.Add(preset);
-        _presetPicker.SelectedItem = PresetLibrary.Default;
-        _presetPicker.SelectedIndexChanged += OnPresetChanged;
+        _presetPicker = new ComboBox { Visible = false }; // field still required by OnPresetChanged; kept hidden
 
         _keysToggle = new CheckBox { Text = "⌨  Keystrokes", Checked = true, AutoSize = true, Left = 16, Top = 92 };
         _keysToggle.CheckedChanged += (_, _) => _keystrokes.Enabled = _keysToggle.Checked;
@@ -176,7 +174,7 @@ public sealed class MainWindow : Form
         };
         _chakraPicker.Items.AddRange(new object[]
         {
-            new ChakraOption(BeatPreset.Focused, "Focused (no bowl)"),
+            new ChakraOption(BeatPreset.Focused,     "Tibetan Beat"),
             new ChakraOption(BeatPreset.Root,        "Root · 396 Hz"),
             new ChakraOption(BeatPreset.Sacral,      "Sacral · 417 Hz"),
             new ChakraOption(BeatPreset.SolarPlexus, "Solar Plexus · 528 Hz"),
@@ -260,7 +258,6 @@ public sealed class MainWindow : Form
         };
 
         Controls.Add(presetLabel);
-        Controls.Add(_presetPicker);
         Controls.Add(_keysToggle);
         Controls.Add(_bedToggle);
         Controls.Add(chakraLabel);

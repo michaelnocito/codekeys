@@ -168,12 +168,14 @@ public static class Conductor
             .ToList();
         if (!layers.Contains(BeatLayer.Pulse)) layers.Add(BeatLayer.Pulse); // gentle accent
         if (!layers.Contains(BeatLayer.Bass))  layers.Add(BeatLayer.Bass);  // the continuous hum
-        // Chakra presets are DEFINED by their bowl — ring it from the start. Non-chakra moods bring
-        // the bowl in mid-cycle alongside the other additive voices.
+        // Bowl Bass Keys' two beat modes both have bowls from the start: Tibetan Beat (Focused, the
+        // unspecific bowl + bass mode) AND each of the seven chakra tunings. Other moods (Relaxed /
+        // Burnout / Silly — dormant) keep their original build-gated bowl entry.
         bool isChakra = SignalsToBeat.ChakraBowlFreq(current.Preset).HasValue;
-        if (isChakra) layers.Add(BeatLayer.Bowl);
+        bool isShownBeat = isChakra || current.Preset == BeatPreset.Focused;
+        if (isShownBeat) layers.Add(BeatLayer.Bowl);
         if (build > 0.30) layers.Add(BeatLayer.Ghost);  // soft taps   (~ 5.5 min in)
-        if (!isChakra && build > 0.50) layers.Add(BeatLayer.Bowl);   // bowl strikes (~ 7 min in)
+        if (!isShownBeat && build > 0.50) layers.Add(BeatLayer.Bowl);   // bowl strikes (~ 7 min in)
         if (build > 0.70) layers.Add(BeatLayer.Splash); // rare colour  (~ 8.4 min in)
 
         return current with { Bpm = bpm, Density = density, Layers = layers.ToArray() };

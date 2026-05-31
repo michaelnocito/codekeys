@@ -19,17 +19,12 @@ namespace CodeKeys.Core.Presets;
 /// </summary>
 public static class PresetLibrary
 {
+    // App is locked to the Midnight keystroke voicing. Other presets (Pulse, Thock, Keyboard,
+    // AfterDark, Electric, GrandPiano, Rhodes, Marimba) are kept dormant in this file for easy
+    // revival; only Midnight is exposed for now.
     public static IReadOnlyList<Preset> All { get; } = new[]
     {
         Midnight(),
-        Pulse(),
-        Thock(),
-        Keyboard(),
-        AfterDark(),
-        Electric(),
-        GrandPiano(),
-        Rhodes(),
-        Marimba(),
     };
 
     public static Preset Default => ById("midnight") ?? All[0]; // the deep-beat blend Mike dialed in

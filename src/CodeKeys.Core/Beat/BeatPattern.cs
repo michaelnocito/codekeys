@@ -13,6 +13,12 @@ public readonly record struct BeatHit(int Step, BeatLayer Layer, int Midi, doubl
 public static class BeatPattern
 {
     /// <summary>
+    /// Bank-key offset for the LONG bass variant (a much-longer-decay sine baked at the same pitch).
+    /// The pattern adds this to the natural MIDI when it wants the long variant; the renderer's bank
+    /// keys both short and long under (Bass, midi) and (Bass, midi + LongBassOffset) respectively.
+    /// </summary>
+    public const int LongBassOffset = 1200; // 100 octaves — large + divisible by 12 so pitch class is preserved
+    /// <summary>
     /// Build the hit timeline for one loop of <paramref name="spec"/>. <paramref name="cycle"/> is
     /// the loop index — it seeds the per-loop variation, so consecutive loops differ (varying
     /// off-beats, marimba notes, and a periodic fill) instead of repeating dead. The quarter-note
@@ -64,13 +70,54 @@ public static class BeatPattern
                     hits.Add(new BeatHit(s, BeatLayer.Pulse, root, 0.5, swing));
             }
 
-            // Bass: a deep low boom on the half-bar (steady, driving), mostly the root with an
-            // occasional fifth — an octave below the root for body. Long resonance is in the voice.
-            if (Has(BeatLayer.Bass) && s % 8 == 0)
+            // Bass: deep low boom — the foundation. Per-loop pattern variance creates a playful
+            // exchange of who leads and how long. Five rotating patterns vary spacing + voice length
+            // (mid ~2.0s vs long ~3.6s) so the drone breathes instead of repeating identically.
+            //   pattern 0: every half-bar, mostly mid                       (steady, current)
+            //   pattern 1: only first half of each bar — bass rings longer  (sparse, long sustain)
+            //   pattern 2: half-bar + an offbeat "answer" at s%8==6         (call-and-response)
+            //   pattern 3: every half-bar, alternates root / fifth on each   (two-voice dialog)
+            //   pattern 4: long-bass on bar starts, mid-bass between        (leader + chorus)
+            if (Has(BeatLayer.Bass))
             {
-                int deg = rng.Next() < 0.25 ? 4 : 0; // mostly root, sometimes the fifth
-                int midi = scale.DegreeToMidi(root - 12, deg);
-                hits.Add(new BeatHit(s, BeatLayer.Bass, midi, accents.Contains(s) ? 0.6 : 0.5, swing));
+                int pattern = cycle % 5;
+                int halfIdx = (s / 8) % 2;     // 0 = beat 1 of bar, 1 = beat 3 of bar
+                int barIdx = s / 16;
+
+                bool playHalfBar = (s % 8 == 0) && pattern switch
+                {
+                    1 => halfIdx == 0,
+                    4 => true,
+                    _ => true,
+                };
+
+                if (playHalfBar)
+                {
+                    // Note choice — root by default; pattern 3 alternates root/fifth for dialog.
+                    int deg = pattern switch
+                    {
+                        3 => halfIdx == 0 ? 0 : 4,
+                        _ => rng.Next() < 0.25 ? 4 : 0,
+                    };
+
+                    // Length variant — patterns 1 and 4 favour the long lingering bass on bar starts.
+                    bool useLong =
+                        (pattern == 1) ||                                 // long, sparse
+                        (pattern == 4 && s % 16 == 0) ||                  // leader on bar start
+                        (pattern == 0 && barIdx % 2 == 0 && halfIdx == 0); // occasional long on even bars
+
+                    int baseMidi = scale.DegreeToMidi(root - 12, deg);
+                    int midi = useLong ? baseMidi + LongBassOffset : baseMidi;
+                    double gain = accents.Contains(s) ? 0.6 : (halfIdx == 0 ? 0.55 : 0.45);
+                    hits.Add(new BeatHit(s, BeatLayer.Bass, midi, gain, swing));
+                }
+
+                // pattern 2: offbeat "answer" three steps past each half-bar (call-and-response).
+                if (pattern == 2 && (s == 6 || s == 22 || s == 38 || s == 54))
+                {
+                    int midi = scale.DegreeToMidi(root - 12, 4); // fifth answers the root
+                    hits.Add(new BeatHit(s, BeatLayer.Bass, midi, 0.40, 0));
+                }
             }
 
             // Marimba: density-driven scale notes on the 8th-note grid (varies per loop via the seed).
