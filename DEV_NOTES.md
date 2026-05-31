@@ -82,6 +82,10 @@ physiological claims). Roadmap "v2 adaptive engine" section has the full spec.
   mood eases in. Bank still pre-bakes every voice so a layer entering mid-session
   never synthesizes on the audio thread.
 - **MainWindow**: the 3s timer now calls `_beat.Observe(Conductor.Estimate(snap))`.
+- **Demo toggle** (`BeatSequencer.TimeScale`, UI "⚡ Demo build-up"): compresses the
+  arc clock 20× (≈12-min build-up → ~36s) so it's auditionable; leaves the arousal
+  ramp at real time so calm/energize still feels natural. Dev aid — likely hide
+  before ship.
 - **Motif seed stabilized**: `motif|preset|scale|root` only (dropped bpm/loopBars)
   so the conductor's tempo drift can't scramble the tune.
 
