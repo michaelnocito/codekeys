@@ -65,7 +65,7 @@ public static class SignalsToBeat
         // layers
         var layers = new List<BeatLayer>(p.Base);
         if (ghostNotes > 0.15 && !layers.Contains(BeatLayer.Ghost)) layers.Add(BeatLayer.Ghost);
-        if (loopBars >= 4 && !layers.Contains(BeatLayer.Arp)) layers.Add(BeatLayer.Arp);
+        if (loopBars >= 4 && !layers.Contains(BeatLayer.Melody)) layers.Add(BeatLayer.Melody);
 
         return new BeatSpec(preset, bpm, p.Scale, p.Root, loopBars, density, swing, ghostNotes, accents, layers.ToArray());
     }

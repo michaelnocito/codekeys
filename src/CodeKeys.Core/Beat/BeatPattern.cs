@@ -49,17 +49,37 @@ public static class BeatPattern
                 hits.Add(new BeatHit(s, BeatLayer.Marimba, midi, accents.Contains(s) ? 0.9 : 0.7, swing));
             }
 
-            // Arp: steady ascending scale run on the 8th-note grid.
-            if (Has(BeatLayer.Arp) && s % 2 == 0)
-            {
-                int degree = (s / 2) % span;
-                int midi = scale.DegreeToMidi(root + 12, degree);
-                hits.Add(new BeatHit(s, BeatLayer.Arp, midi, 0.45, swing));
-            }
-
             // Ghost: glitchy fills, probability scaled by the backspace-driven ghost amount.
             if (Has(BeatLayer.Ghost) && rng.Next() < spec.GhostNotes * 0.25)
                 hits.Add(new BeatHit(s, BeatLayer.Ghost, root + 24, 0.35, swing));
+        }
+
+        // Melody: a one-bar motif laid out per bar as call-and-response. Even bars state the
+        // motif; odd bars "answer" it by resolving to the tonic. The motif is seeded only from
+        // the spec's *stable* identity (preset/scale/root/bpm/loopBars) — NOT density or accents —
+        // so per-loop Evolve drift never scrambles the tune; it stays recognizable. This replaces
+        // the old ascending scale run.
+        if (Has(BeatLayer.Melody))
+        {
+            var motif = MotifFactory.Generate(
+                Fnv.Hash($"motif|{spec.Preset}|{spec.Scale}|{spec.Root}|{spec.Bpm}|{spec.LoopBars}"),
+                scale.Intervals.Count);
+            var answer = MotifFactory.WithResolvedEnding(motif);
+            int melodyBase = root + 12; // the tune sits an octave above the root
+
+            for (int bar = 0; bar < spec.LoopBars; bar++)
+            {
+                var phrase = (bar % 2 == 1) ? answer : motif;
+                int barStart = bar * 16;
+                foreach (var mn in phrase.Notes)
+                {
+                    int step = barStart + mn.Step;
+                    double swing = (step % 2 == 1) ? spec.Swing : 0.0;
+                    double gain = accents.Contains(step) ? Math.Min(1.0, mn.Gain + 0.2) : mn.Gain;
+                    int midi = scale.DegreeToMidi(melodyBase, mn.Degree);
+                    hits.Add(new BeatHit(step, BeatLayer.Melody, midi, gain, swing));
+                }
+            }
         }
 
         // Pad: a sustained root/3rd/5th chord at the top of each bar.

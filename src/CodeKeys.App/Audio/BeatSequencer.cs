@@ -108,7 +108,7 @@ public sealed class BeatSequencer : ISampleProvider
         {
             int midi = scale.DegreeToMidi(root + 12, d);
             Put(BeatLayer.Marimba, midi);
-            Put(BeatLayer.Arp, midi);
+            Put(BeatLayer.Melody, midi);
         }
     }
 
@@ -122,7 +122,7 @@ public sealed class BeatSequencer : ISampleProvider
                                 new Envelope { Attack = 0.06, Decay = 0.5, Sustain = 0.6, Release = 0.9 },
                                 holdSeconds: 1.2, gain: 0.35f),
             BeatLayer.Marimba => InstrumentFactory.CreateMarimba(f, _rate),
-            BeatLayer.Arp => SynthVoiceFactory.CreateTone(f, _rate, Waveform.WarmPad, Envelope.Pluck, 0.12, 0.4f),
+            BeatLayer.Melody => SynthVoiceFactory.CreateTone(f, _rate, Waveform.WarmPad, Envelope.Pluck, 0.18, 0.45f),
             BeatLayer.Ghost => PercussionFactory.CreateTap(f, _rate, decaySeconds: 0.045, noiseAmount: 0.25),
             _ => SynthVoiceFactory.CreateTone(f, _rate, Waveform.Sine, Envelope.Pluck)
         };

@@ -3,7 +3,7 @@
 Last updated: 2026-05-30
 
 ## Where we are
-Working app, system-wide. Builds clean, **59/59 unit tests pass**.
+Working app, system-wide. Builds clean, **127/127 unit tests pass**.
 
 - **Build/test (PowerShell):** refresh PATH from Machine+User first, then
   `dotnet build CodeKeys.sln -c Debug` / `dotnet test CodeKeys.sln -c Debug`.
@@ -39,7 +39,31 @@ Working app, system-wide. Builds clean, **59/59 unit tests pass**.
   `evolve()` each cycle, live `SetSpec`. Wired as the bed via
   `AudioEngine.SetBedProvider` at −12 dB (bedLevel 0.25). MainWindow: **Beat
   toggle + Mood dropdown** (Focused/Relaxed/Burnout/Silly). Brown-noise bed
-  retired. Voices: pad/pulse/marimba/arp/ghost.
+  retired. Voices: pad/pulse/marimba/**melody**/ghost.
+
+## Melody redesign — Phase 1 DONE (2026-05-30)
+Mike's feedback: the beat "just plays a piano scale after a bit of typing" — it
+needs variety, must not annoy, and should **introduce a melody that emerges over
+~15–20 min** (NOT tied to his keystrokes — just emerges over the session).
+- **Root cause:** the old `Arp` layer was a literal ascending scale
+  (`degree = (s/2) % span`), switched on at 40 chars.
+- **Fix (Phase 1):** new `Core/Beat/Motif.cs` — pure, deterministic motif engine.
+  A `Motif` = one bar of scale-degree notes with rests (it breathes).
+  `MotifFactory.Generate(seed, scaleDegrees)` grows a tune via weighted stepwise
+  motion + tonic gravity + a resolving ending (not a scale run). Transforms:
+  `Transpose` / `Invert` / `WithResolvedEnding` (raw material for Phase 2).
+  `BeatLayer.Arp` renamed → **`Melody`**. `BeatPattern` lays the motif per bar as
+  **antecedent/consequent** (even bars state it, odd bars answer it on the tonic).
+  Motif is seeded from the spec's **stable identity** (preset/scale/root/bpm/
+  loopBars) — NOT density/accents — so per-loop `Evolve` drift never scrambles the
+  tune; it stays recognizable. 16 new tests (`MotifTests`).
+- **NEXT — Phase 2 (session arc):** a pure `SessionArc` mapping elapsed minutes →
+  phase (Establish→Statement→Development→Peak→Resolution) → target density/layers/
+  variation intensity; make `Evolve` *develop* the motif (apply transforms) per
+  phase instead of only jittering density+accents; **fix the `_cycle = 0` reset in
+  `BeatSequencer.UpdateGroove`** so the session arc isn't restarted on every 3s
+  typing snapshot. Then Phase 3 = ear-test + tuning.
+  Also revisit the still-random **Marimba** noodle (make it support the motif).
 - **Module 1 (live capture → Signals) DONE.** `Core/Input/KeyClassifier` (vk→KeyKind)
   + `Core/Beat/SignalsCollector` (rolling 12s window → Signals; records only timing
   + category + an upper/lower bit, **never the characters** — `Signals.Text` always
@@ -64,4 +88,4 @@ Working app, system-wide. Builds clean, **59/59 unit tests pass**.
   Audio (Synth/Percussion factories, KeyVoiceSet, IVoicePlayer), Presets.
 - `CodeKeys.App` (net8.0-windows, NAudio, WinForms): AudioEngine, GlobalKeyboardHook,
   MainWindow.
-- `CodeKeys.Tests` (xUnit): 59 tests over the Core logic.
+- `CodeKeys.Tests` (xUnit): 127 tests over the Core logic.

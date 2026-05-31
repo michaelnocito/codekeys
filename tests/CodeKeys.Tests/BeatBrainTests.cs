@@ -81,10 +81,10 @@ public class BeatBrainTests
     }
 
     [Fact]
-    public void Long_Text_Adds_Arp_Layer()
+    public void Long_Text_Adds_Melody_Layer()
     {
         var spec = SignalsToBeat.Of(Sample() with { CharCount = 120 }, BeatPreset.Relaxed);
-        Assert.Contains(BeatLayer.Arp, spec.Layers); // loopBars >= 4
+        Assert.Contains(BeatLayer.Melody, spec.Layers); // loopBars >= 4
     }
 
     [Fact]

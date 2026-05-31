@@ -6,8 +6,8 @@ public enum BeatPreset { Focused, Relaxed, Burnout, Silly }
 /// <summary>The scales a beat can use. This is the tonal source of truth key-sounds must read.</summary>
 public enum BeatScale { Dorian, Major, MajorPentatonic }
 
-/// <summary>The voices a beat can activate.</summary>
-public enum BeatLayer { Pad, Pulse, Marimba, Arp, Ghost }
+/// <summary>The voices a beat can activate. <see cref="Melody"/> plays the developing motif.</summary>
+public enum BeatLayer { Pad, Pulse, Marimba, Melody, Ghost }
 
 /// <summary>
 /// Typing telemetry captured over a session window. Fed into <see cref="SignalsToBeat"/>.
