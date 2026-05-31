@@ -108,11 +108,21 @@ public static class BeatPattern
 
         // Bowl: a Tibetan singing bowl rings on the downbeat of bar 0 of every other loop. Long
         // resonant tail (~2.5s) overlaps into the rest of the loop — the slow shimmering bell that
-        // sits behind the bass hum. Plays the root or fifth, deterministic from the cycle.
+        // sits behind the bass hum. For chakra presets, locked to the Solfeggio frequency; otherwise
+        // the root or fifth, picked deterministically from the cycle.
         if (Has(BeatLayer.Bowl) && cycle % 2 == 0)
         {
-            int deg = rng.Next() < 0.30 ? 4 : 0;
-            int midi = scale.DegreeToMidi(root, deg);
+            int midi;
+            var chakraFreq = SignalsToBeat.ChakraBowlFreq(spec.Preset);
+            if (chakraFreq.HasValue)
+            {
+                midi = SignalsToBeat.ChakraBowlMidi(spec.Preset);
+            }
+            else
+            {
+                int deg = rng.Next() < 0.30 ? 4 : 0;
+                midi = scale.DegreeToMidi(root, deg);
+            }
             hits.Add(new BeatHit(0, BeatLayer.Bowl, midi, 0.55, 0));
         }
 

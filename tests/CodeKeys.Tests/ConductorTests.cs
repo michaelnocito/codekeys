@@ -310,4 +310,39 @@ public class ConductorTests
     {
         Assert.Equal((60, 72), SignalsToBeat.BpmRange(BeatPreset.Focused));
     }
+
+    // ---- chakra presets ----
+
+    [Theory]
+    [InlineData(BeatPreset.Root,        396.0)]
+    [InlineData(BeatPreset.Sacral,      417.0)]
+    [InlineData(BeatPreset.SolarPlexus, 528.0)]
+    [InlineData(BeatPreset.Heart,       639.0)]
+    [InlineData(BeatPreset.Throat,      741.0)]
+    [InlineData(BeatPreset.ThirdEye,    852.0)]
+    [InlineData(BeatPreset.Crown,       963.0)]
+    public void Chakra_Preset_Tunes_Bowl_To_The_Solfeggio_Frequency(BeatPreset preset, double expectedHz)
+    {
+        Assert.Equal(expectedHz, SignalsToBeat.ChakraBowlFreq(preset));
+    }
+
+    [Fact]
+    public void Non_Chakra_Presets_Have_No_Bowl_Frequency_Override()
+    {
+        foreach (var p in new[] { BeatPreset.Focused, BeatPreset.Relaxed, BeatPreset.Burnout, BeatPreset.Silly })
+            Assert.Null(SignalsToBeat.ChakraBowlFreq(p));
+    }
+
+    [Theory]
+    [InlineData(BeatPreset.Root)]
+    [InlineData(BeatPreset.Heart)]
+    [InlineData(BeatPreset.Crown)]
+    public void Chakra_Bowl_Rings_From_The_Very_Start(BeatPreset preset)
+    {
+        // The bowl IS the chakra's identity, so it must be in the layer set from t=0 (unlike the
+        // non-chakra build where the bowl only joins after build > 0.5).
+        var spec = Conductor.Step(Spec(layers: new[] { BeatLayer.Pulse }) with { Preset = preset },
+                                  userArousal: 0.5, elapsedSeconds: 0, dtSeconds: 5, Lo, Hi);
+        Assert.Contains(BeatLayer.Bowl, spec.Layers);
+    }
 }

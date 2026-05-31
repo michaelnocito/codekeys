@@ -20,6 +20,16 @@ public static class SignalsToBeat
             [BeatPreset.Relaxed] = new(60, 70, BeatScale.MajorPentatonic, "C3", new[] { BeatLayer.Pad }),
             [BeatPreset.Burnout] = new(75, 88, BeatScale.Major, "F3", new[] { BeatLayer.Pad, BeatLayer.Pulse }),
             [BeatPreset.Silly]   = new(100, 130, BeatScale.MajorPentatonic, "C4", new[] { BeatLayer.Marimba, BeatLayer.Pulse }),
+            // Chakra tunings — same low bass hum (D3 → D2 = ~73 Hz) and pulse as Focused, so the
+            // bass character Mike likes is preserved. The Tibetan singing bowl is what varies, ringing
+            // at the chakra's Solfeggio frequency (see ChakraBowlFreq).
+            [BeatPreset.Root]        = new(60, 72, BeatScale.MajorPentatonic, "D3", new[] { BeatLayer.Pulse }),
+            [BeatPreset.Sacral]      = new(60, 72, BeatScale.MajorPentatonic, "D3", new[] { BeatLayer.Pulse }),
+            [BeatPreset.SolarPlexus] = new(60, 72, BeatScale.MajorPentatonic, "D3", new[] { BeatLayer.Pulse }),
+            [BeatPreset.Heart]       = new(60, 72, BeatScale.MajorPentatonic, "D3", new[] { BeatLayer.Pulse }),
+            [BeatPreset.Throat]      = new(60, 72, BeatScale.MajorPentatonic, "D3", new[] { BeatLayer.Pulse }),
+            [BeatPreset.ThirdEye]    = new(60, 72, BeatScale.MajorPentatonic, "D3", new[] { BeatLayer.Pulse }),
+            [BeatPreset.Crown]       = new(60, 72, BeatScale.MajorPentatonic, "D3", new[] { BeatLayer.Pulse }),
         };
 
     /// <summary>Deterministically derive a beat from typing signals and a mood preset.</summary>
@@ -107,6 +117,32 @@ public static class SignalsToBeat
     {
         var p = Presets[preset];
         return (p.BpmLo, p.BpmHi);
+    }
+
+    /// <summary>
+    /// The Solfeggio bowl frequency (Hz) for a chakra preset; <c>null</c> for non-chakra moods. These
+    /// are the seven Solfeggio frequencies widely associated with the chakras in sound-healing practice
+    /// (Dr Joseph Puleo, 1970s) — not peer-reviewed medicine, but the strongest belief-grounded set,
+    /// per Mike's "studied or strongly believed" framing.
+    /// </summary>
+    public static double? ChakraBowlFreq(BeatPreset preset) => preset switch
+    {
+        BeatPreset.Root        => 396.0,
+        BeatPreset.Sacral      => 417.0,
+        BeatPreset.SolarPlexus => 528.0,
+        BeatPreset.Heart       => 639.0,
+        BeatPreset.Throat      => 741.0,
+        BeatPreset.ThirdEye    => 852.0,
+        BeatPreset.Crown       => 963.0,
+        _ => null,
+    };
+
+    /// <summary>The sentinel MIDI used as a bank key for the chakra bowl voice (must not collide
+    /// with the natural scale-degree MIDIs used for other bowl voices).</summary>
+    public static int ChakraBowlMidi(BeatPreset preset)
+    {
+        var f = ChakraBowlFreq(preset);
+        return f.HasValue ? (int)Math.Round(NoteUtil.FrequencyToMidi(f.Value)) : -1;
     }
 
     // ---- helpers (ported 1:1) ----

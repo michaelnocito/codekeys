@@ -147,10 +147,10 @@ public sealed class BeatSequencer : ISampleProvider
         int root = NoteUtil.ParseNoteName(spec.Root);
         int span = scale.DegreeSpan(2);
 
-        void Put(BeatLayer layer, int midi)
+        void Put(BeatLayer layer, int midi, double? freqOverride = null)
         {
             var key = (layer, midi);
-            if (!_bank.ContainsKey(key)) _bank[key] = Bake(layer, midi);
+            if (!_bank.ContainsKey(key)) _bank[key] = Bake(layer, midi, freqOverride);
         }
 
         // Bake every voice the arc might enable (regardless of which layers are active right now),
@@ -160,7 +160,12 @@ public sealed class BeatSequencer : ISampleProvider
         foreach (int deg in new[] { 0, 2, 4 }) Put(BeatLayer.Pad, scale.DegreeToMidi(root, deg));      // chord (unused)
         foreach (int deg in new[] { 0, 4 }) Put(BeatLayer.Bass, scale.DegreeToMidi(root - 12, deg));   // deep low boom
         foreach (int deg in new[] { 0, 2, 4 }) Put(BeatLayer.Splash, scale.DegreeToMidi(root, deg));   // rare dark splash
-        foreach (int deg in new[] { 0, 4 }) Put(BeatLayer.Bowl, scale.DegreeToMidi(root, deg));        // Tibetan bowl strikes
+        // Chakra presets tune the bowl to a specific Solfeggio Hz; others use scale degrees.
+        var chakraFreq = SignalsToBeat.ChakraBowlFreq(spec.Preset);
+        if (chakraFreq.HasValue)
+            Put(BeatLayer.Bowl, SignalsToBeat.ChakraBowlMidi(spec.Preset), chakraFreq.Value);
+        else
+            foreach (int deg in new[] { 0, 4 }) Put(BeatLayer.Bowl, scale.DegreeToMidi(root, deg));    // Tibetan bowl strikes
         foreach (int deg in new[] { 0, 2, 4 }) Put(BeatLayer.Chime, scale.DegreeToMidi(root + 24, deg)); // high sparkle (unused)
         for (int d = 0; d < span; d++)
         {
@@ -170,9 +175,9 @@ public sealed class BeatSequencer : ISampleProvider
         }
     }
 
-    private float[] Bake(BeatLayer layer, int midi)
+    private float[] Bake(BeatLayer layer, int midi, double? freqOverride = null)
     {
-        double f = NoteUtil.MidiToFrequency(midi);
+        double f = freqOverride ?? NoteUtil.MidiToFrequency(midi);
         SampleBuffer buf = layer switch
         {
             // Atmospheric pulse — a pure deep sine with a soft attack and long sustain (no pitch

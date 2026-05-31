@@ -1,7 +1,16 @@
 namespace CodeKeys.Core.Beat;
 
-/// <summary>The mood/character of a generated beat. Each maps to a tempo range, scale, root, and base layers.</summary>
-public enum BeatPreset { Focused, Relaxed, Burnout, Silly }
+/// <summary>
+/// The mood/character of a generated beat. Each maps to a tempo range, scale, root, and base layers.
+/// The seven chakra entries keep the same low bass hum but tune the singing bowl to the Solfeggio
+/// frequency associated with that chakra (396, 417, 528, 639, 741, 852, 963 Hz).
+/// </summary>
+public enum BeatPreset
+{
+    Focused, Relaxed, Burnout, Silly,
+    // Chakra tunings — same low bass hum + a singing bowl at the Solfeggio frequency.
+    Root, Sacral, SolarPlexus, Heart, Throat, ThirdEye, Crown
+}
 
 /// <summary>The scales a beat can use. This is the tonal source of truth key-sounds must read.</summary>
 public enum BeatScale { Dorian, Major, MajorPentatonic }

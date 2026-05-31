@@ -31,6 +31,7 @@ public sealed class MainWindow : Form
     private CheckBox _bedToggle = null!;
     private Label _status = null!;
     private ComboBox _presetPicker = null!;
+    private ComboBox _chakraPicker = null!;
 
     // Representative typing signals. NOTE: Text is intentionally left empty — CodeKeys never
     // captures what you type (privacy), so the beat seeds from the mood, not your keystrokes.
@@ -123,7 +124,7 @@ public sealed class MainWindow : Form
     private void BuildUi()
     {
         Text = "CodeKeys";
-        ClientSize = new Size(440, 340);
+        ClientSize = new Size(440, 370);
         StartPosition = FormStartPosition.CenterScreen;
         Font = new Font("Segoe UI", 9f);
         MaximizeBox = false;
@@ -163,19 +164,42 @@ public sealed class MainWindow : Form
             if (_bedToggle.Checked) _beat.Reset();
         };
 
-        // Locked to the Focused mood for now; other beat options hidden to keep this focused.
+        // Chakra picker — switches the bed between Focused (no bowl) and the seven Solfeggio-tuned
+        // chakra modes (each rings a Tibetan bowl at that chakra's frequency over the same low bass).
+        var chakraLabel = new Label { Text = "🪷", AutoSize = true, Left = 130, Top = 126 };
+        _chakraPicker = new ComboBox
+        {
+            DropDownStyle = ComboBoxStyle.DropDownList,
+            Left = 150,
+            Top = 122,
+            Width = 175
+        };
+        _chakraPicker.Items.AddRange(new object[]
+        {
+            new ChakraOption(BeatPreset.Focused, "Focused (no bowl)"),
+            new ChakraOption(BeatPreset.Root,        "Root · 396 Hz"),
+            new ChakraOption(BeatPreset.Sacral,      "Sacral · 417 Hz"),
+            new ChakraOption(BeatPreset.SolarPlexus, "Solar Plexus · 528 Hz"),
+            new ChakraOption(BeatPreset.Heart,       "Heart · 639 Hz"),
+            new ChakraOption(BeatPreset.Throat,      "Throat · 741 Hz"),
+            new ChakraOption(BeatPreset.ThirdEye,    "Third Eye · 852 Hz"),
+            new ChakraOption(BeatPreset.Crown,       "Crown · 963 Hz"),
+        });
+        _chakraPicker.SelectedIndex = 0;
+        _chakraPicker.SelectedIndexChanged += OnChakraChanged;
+
         // Dev aid: compress the build clock 20× so the arc is auditionable in seconds.
-        var demoToggle = new CheckBox { Text = "⚡  Demo (fast)", Checked = false, AutoSize = true, Left = 130, Top = 124 };
+        var demoToggle = new CheckBox { Text = "⚡  Demo (fast)", Checked = false, AutoSize = true, Left = 335, Top = 124 };
         demoToggle.CheckedChanged += (_, _) => _beat.TimeScale = demoToggle.Checked ? 20.0 : 1.0;
 
         // Restart the breathing cycle at silence without toggling Beat off/on.
-        var resetButton = new Button { Text = "↺  Reset beat", AutoSize = true, Left = 260, Top = 122 };
+        var resetButton = new Button { Text = "↺  Reset beat", AutoSize = true, Left = 16, Top = 156 };
         resetButton.Click += (_, _) => _beat.Reset();
 
         // Per-layer levels (the relative mix). The master is the Windows volume mixer entry —
         // these knobs let Mike dial keystrokes vs the beat against each other without leaving
         // the system master out of his hands.
-        var keysVolLabel = new Label { Text = "⌨  Keystrokes level", AutoSize = true, Left = 16, Top = 162 };
+        var keysVolLabel = new Label { Text = "⌨  Keystrokes level", AutoSize = true, Left = 16, Top = 192 };
         var keysVolSlider = new TrackBar
         {
             Minimum = 0,
@@ -184,11 +208,11 @@ public sealed class MainWindow : Form
             TickFrequency = 25,
             Width = 408,
             Left = 14,
-            Top = 182
+            Top = 212
         };
         keysVolSlider.ValueChanged += (_, _) => _engine.KeysLevel = keysVolSlider.Value / 100f;
 
-        var beatVolLabel = new Label { Text = "🥁  Beat level", AutoSize = true, Left = 16, Top = 230 };
+        var beatVolLabel = new Label { Text = "🥁  Beat level", AutoSize = true, Left = 16, Top = 260 };
         var beatVolSlider = new TrackBar
         {
             Minimum = 0,
@@ -197,7 +221,7 @@ public sealed class MainWindow : Form
             TickFrequency = 25,
             Width = 408,
             Left = 14,
-            Top = 250
+            Top = 280
         };
         beatVolSlider.ValueChanged += (_, _) => _engine.BedLevel = beatVolSlider.Value / 100f;
 
@@ -206,7 +230,7 @@ public sealed class MainWindow : Form
             Text = "🔊  Overall volume follows Windows — these sliders adjust the relative mix.",
             AutoSize = false,
             Left = 16,
-            Top = 296,
+            Top = 326,
             Width = 408,
             Height = 18,
             ForeColor = SystemColors.GrayText
@@ -239,6 +263,8 @@ public sealed class MainWindow : Form
         Controls.Add(_presetPicker);
         Controls.Add(_keysToggle);
         Controls.Add(_bedToggle);
+        Controls.Add(chakraLabel);
+        Controls.Add(_chakraPicker);
         Controls.Add(demoToggle);
         Controls.Add(resetButton);
         Controls.Add(keysVolLabel);
@@ -249,6 +275,20 @@ public sealed class MainWindow : Form
         Controls.Add(_status);
         Controls.Add(heading);
         Controls.Add(stamp);
+    }
+
+    /// <summary>An item in the chakra picker — pairs a display label with the underlying preset.</summary>
+    private sealed record ChakraOption(BeatPreset Preset, string Label)
+    {
+        public override string ToString() => Label;
+    }
+
+    private void OnChakraChanged(object? sender, EventArgs e)
+    {
+        if (_chakraPicker.SelectedItem is not ChakraOption opt) return;
+        // SetSpec restarts the additive build from silence, so the chosen chakra eases in cleanly.
+        _beat.SetSpec(SignalsToBeat.Of(DefaultSignals, opt.Preset));
+        if (_bedToggle.Checked) _beat.Reset();
     }
 
     private void OnPresetChanged(object? sender, EventArgs e)

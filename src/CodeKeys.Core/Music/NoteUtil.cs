@@ -12,6 +12,10 @@ public static class NoteUtil
     public static double MidiToFrequency(int midiNote)
         => A4Hz * Math.Pow(2.0, (midiNote - A4Midi) / 12.0);
 
+    /// <summary>Convert a frequency in Hz to its (fractional) MIDI note number.</summary>
+    public static double FrequencyToMidi(double frequency)
+        => A4Midi + 12.0 * Math.Log2(frequency / A4Hz);
+
     /// <summary>
     /// Parse a note name like "C4", "F#3", "Eb5" into a MIDI note number.
     /// Octave numbering is scientific pitch (C4 = middle C = MIDI 60).
