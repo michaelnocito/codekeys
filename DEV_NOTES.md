@@ -3,7 +3,7 @@
 Last updated: 2026-05-30
 
 ## Where we are
-Working app, system-wide. Builds clean, **127/127 unit tests pass**.
+Working app, system-wide. Builds clean, **151/151 unit tests pass**.
 
 - **Build/test (PowerShell):** refresh PATH from Machine+User first, then
   `dotnet build CodeKeys.sln -c Debug` / `dotnet test CodeKeys.sln -c Debug`.
@@ -57,13 +57,43 @@ needs variety, must not annoy, and should **introduce a melody that emerges over
   Motif is seeded from the spec's **stable identity** (preset/scale/root/bpm/
   loopBars) — NOT density/accents — so per-loop `Evolve` drift never scrambles the
   tune; it stays recognizable. 16 new tests (`MotifTests`).
-- **NEXT — Phase 2 (session arc):** a pure `SessionArc` mapping elapsed minutes →
-  phase (Establish→Statement→Development→Peak→Resolution) → target density/layers/
-  variation intensity; make `Evolve` *develop* the motif (apply transforms) per
-  phase instead of only jittering density+accents; **fix the `_cycle = 0` reset in
-  `BeatSequencer.UpdateGroove`** so the session arc isn't restarted on every 3s
-  typing snapshot. Then Phase 3 = ear-test + tuning.
-  Also revisit the still-random **Marimba** noodle (make it support the motif).
+## Adaptive conductor DONE (2026-05-30) — the headline feature
+Mike's direction: generate music that keeps him in flow — type faster → gently
+calm; slower → gently energize; changes must be SLOW (he flagged "too fast").
+Research-grounded (iso principle + Yerkes-Dodson; HR-entrainment is weak so no
+physiological claims). Roadmap "v2 adaptive engine" section has the full spec.
+- **`Core/Beat/Conductor.cs`** (pure, deterministic, 24 tests):
+  - `Estimate(Signals)→arousal 0..1` = 0.55·speed + 0.25·erraticness +
+    0.20·struggle(backspaces); idle reads 0.25.
+  - `MusicalTarget(a)` = **counter-active** reflection about `FlowCenter` (0.6):
+    over-aroused → aim lower (settle), under → aim higher (activate).
+  - `Step(spec, arousal, elapsed, dt, lo, hi)` rate-limits arousal to
+    `SlewPerSec`(0.006)/s (≈a minute end-to-end → gentle), maps it to bpm+density
+    within the preset range, and runs the **session arc** by elapsed time:
+    Establish 0–2m (pad+pulse, sparse) → Statement 2–6m (melody enters) →
+    Development 6–12m (marimba joins) → Flow 12m+ (sustain). Preserves
+    scale/root/preset/loopBars → renderer never rebakes.
+  - Tunables are consts at the top of the file (tune by ear).
+- **`BeatSequencer`** rewired: `UpdateGroove`→**`Observe(arousal)`** (just stores
+  the latest arousal); at each loop boundary it calls `Conductor.Step` (replaces
+  the old random `Evolve`). **Session clock `_sessionSamples` only resets on
+  `SetSpec` (mood change)** — fixed the bug where every 3s typing snapshot reset
+  the arc. `SetSpec` normalizes the opening to the sparse Establish phase so a new
+  mood eases in. Bank still pre-bakes every voice so a layer entering mid-session
+  never synthesizes on the audio thread.
+- **MainWindow**: the 3s timer now calls `_beat.Observe(Conductor.Estimate(snap))`.
+- **Motif seed stabilized**: `motif|preset|scale|root` only (dropped bpm/loopBars)
+  so the conductor's tempo drift can't scramble the tune.
+
+### NEXT (after Mike's ear test)
+- **Tune by ear**: FlowCenter, LeadGain, SlewPerSec, arc phase lengths, melody
+  volume. Does "calm on speed-up / energize on slow-down" feel right & gentle?
+- Motif *development* via transforms (invert/transpose) per arc phase — needs a
+  `Development` field on BeatSpec; deferred to keep this change bounded.
+- Resolution phase on idle (wind down when the user stops), not just by timer.
+- Still-random **Marimba** noodle → make it support the motif.
+- **Volume follows OS** quick win (drop in-app slider; see roadmap).
+- **Heart-rate biofeedback**: BLE strap first, Apple Watch later (see roadmap).
 - **Module 1 (live capture → Signals) DONE.** `Core/Input/KeyClassifier` (vk→KeyKind)
   + `Core/Beat/SignalsCollector` (rolling 12s window → Signals; records only timing
   + category + an upper/lower bit, **never the characters** — `Signals.Text` always
@@ -88,4 +118,4 @@ needs variety, must not annoy, and should **introduce a melody that emerges over
   Audio (Synth/Percussion factories, KeyVoiceSet, IVoicePlayer), Presets.
 - `CodeKeys.App` (net8.0-windows, NAudio, WinForms): AudioEngine, GlobalKeyboardHook,
   MainWindow.
-- `CodeKeys.Tests` (xUnit): 127 tests over the Core logic.
+- `CodeKeys.Tests` (xUnit): 151 tests over the Core logic.

@@ -102,6 +102,13 @@ public static class SignalsToBeat
     /// <summary>The root note of a spec as a MIDI number (for the spatial key map / synth).</summary>
     public static int RootMidi(BeatSpec spec) => NoteUtil.ParseNoteName(spec.Root);
 
+    /// <summary>The tempo range a preset can move within — the Conductor maps arousal onto it.</summary>
+    public static (int Lo, int Hi) BpmRange(BeatPreset preset)
+    {
+        var p = Presets[preset];
+        return (p.BpmLo, p.BpmHi);
+    }
+
     // ---- helpers (ported 1:1) ----
 
     private static double Clamp(double x, double lo, double hi) => Math.Min(hi, Math.Max(lo, x));

@@ -8,12 +8,14 @@ namespace CodeKeys.App.Audio;
 /// <summary>
 /// The generative beat renderer (module 3): turns a <see cref="BeatSpec"/> into a looping,
 /// evolving bed. It's a sample-clocked sequencer — on each step it spawns pre-baked voice
-/// buffers per the <see cref="BeatPattern"/> timeline, mixes the ringing voices, and at the
-/// end of each loop calls <c>evolve()</c> so the groove drifts without going stale.
+/// buffers per the <see cref="BeatPattern"/> timeline and mixes the ringing voices. At the end
+/// of each loop it hands the spec to the <see cref="Conductor"/>, which gently steers tempo /
+/// density toward a flow band (from the latest typing arousal) and advances the session arc.
 ///
 /// All pitches come from the spec's scale/root, so the bed is always consonant with the keys.
-/// Voices are pre-baked per spec (a full scale bank), so loop turnover never synthesizes on
-/// the audio thread.
+/// Voices are pre-baked per spec (a full scale bank), so loop turnover never synthesizes on the
+/// audio thread. The conductor only moves bpm/density/layers (never scale/root), so loop turnover
+/// reuses the baked bank — no audio-thread synthesis, no clicks.
 /// </summary>
 public sealed class BeatSequencer : ISampleProvider
 {
@@ -40,8 +42,8 @@ public sealed class BeatSequencer : ISampleProvider
     private readonly List<ActiveVoice> _active = new();
 
     private BeatSpec _spec = null!; // set in ctor via SetSpec
-    private BeatSpec? _pending;     // live-update groove, applied at the next loop boundary
-    private int _cycle;
+    private double _userArousal = 0.5;  // latest typing arousal (0..1); updated live via Observe
+    private long _sessionSamples;       // samples since the session (mood) started → arc clock
     private Scheduled[] _schedule = Array.Empty<Scheduled>();
     private long _loopLen = 1;
     private long _playhead;
@@ -54,15 +56,20 @@ public sealed class BeatSequencer : ISampleProvider
         SetSpec(spec);
     }
 
-    /// <summary>Swap to a new beat (e.g. a different mood) live. Re-bakes the voice bank and schedule.</summary>
+    /// <summary>
+    /// Swap to a new beat (e.g. a different mood) live. Re-bakes the voice bank, restarts the
+    /// session arc, and normalizes the spec to the arc's opening (sparse "establish" phase) so a
+    /// new mood eases in rather than slamming in at full texture.
+    /// </summary>
     public void SetSpec(BeatSpec spec)
     {
         lock (_gate)
         {
-            _spec = spec;
-            _pending = null;
-            _cycle = 0;
-            BakeBank(spec);
+            var (lo, hi) = SignalsToBeat.BpmRange(spec.Preset);
+            // dt = 0 → tempo unchanged; this just applies the arc's opening (establish) layers/density.
+            _spec = Conductor.Step(spec, _userArousal, elapsedSeconds: 0, dtSeconds: 0, lo, hi);
+            _sessionSamples = 0;
+            BakeBank(_spec);
             BuildSchedule();
             _playhead = 0;
             _nextIdx = 0;
@@ -71,21 +78,13 @@ public sealed class BeatSequencer : ISampleProvider
     }
 
     /// <summary>
-    /// Live typing update: refresh the groove from new signals (same mood). If the scale/root
-    /// match the current beat, this applies smoothly at the next loop boundary with no rebake
-    /// and no restart; if they differ (mood changed) it falls back to a full <see cref="SetSpec"/>.
+    /// Live typing update: record the latest arousal estimate (0..1). The conductor reads it at the
+    /// next loop boundary and nudges the groove gently — no rebake, no restart. Mood changes go
+    /// through <see cref="SetSpec"/> instead (they change scale/root and need a rebake).
     /// </summary>
-    public void UpdateGroove(BeatSpec spec)
+    public void Observe(double arousal)
     {
-        lock (_gate)
-        {
-            if (spec.Scale != _spec.Scale || spec.Root != _spec.Root)
-            {
-                SetSpec(spec);
-                return;
-            }
-            _pending = spec;
-        }
+        lock (_gate) _userArousal = Math.Min(1.0, Math.Max(0.0, arousal));
     }
 
     private void BakeBank(BeatSpec spec)
@@ -101,6 +100,8 @@ public sealed class BeatSequencer : ISampleProvider
             if (!_bank.ContainsKey(key)) _bank[key] = Bake(layer, midi);
         }
 
+        // Bake every voice the arc might enable (regardless of which layers are active right now),
+        // so a layer turning on mid-session never synthesizes on the audio thread.
         Put(BeatLayer.Pulse, root);
         Put(BeatLayer.Ghost, root + 24);
         foreach (int deg in new[] { 0, 2, 4 }) Put(BeatLayer.Pad, scale.DegreeToMidi(root, deg));
@@ -173,22 +174,20 @@ public sealed class BeatSequencer : ISampleProvider
                 }
                 buffer[offset + i] = sample;
 
+                _sessionSamples++;
+
                 if (++_playhead >= _loopLen)
                 {
                     _playhead = 0;
                     _nextIdx = 0;
-                    if (_pending is not null)
-                    {
-                        _spec = _pending;        // apply the live typing update
-                        _pending = null;
-                        _cycle = 0;
-                    }
-                    else
-                    {
-                        _cycle++;
-                        _spec = SignalsToBeat.Evolve(_spec, _cycle); // drift density + accents
-                    }
-                    BuildSchedule();             // reuses the baked bank (scale/root unchanged)
+                    // Let the conductor gently steer the next loop toward the flow band + along the arc.
+                    // Session time persists across typing updates (it only resets on a mood change),
+                    // so the ramp and the arc are never restarted mid-session.
+                    double elapsed = _sessionSamples / (double)_rate;
+                    double dt = _loopLen / (double)_rate;
+                    var (lo, hi) = SignalsToBeat.BpmRange(_spec.Preset);
+                    _spec = Conductor.Step(_spec, _userArousal, elapsed, dt, lo, hi);
+                    BuildSchedule(); // reuses the baked bank (scale/root unchanged)
                 }
             }
             return count;

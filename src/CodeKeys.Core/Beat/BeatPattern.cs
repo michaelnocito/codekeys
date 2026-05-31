@@ -61,8 +61,10 @@ public static class BeatPattern
         // the old ascending scale run.
         if (Has(BeatLayer.Melody))
         {
+            // Seed ONLY from tonal identity (preset/scale/root) — NOT bpm/density/loopBars — so the
+            // conductor's tempo drift can't scramble the tune. The melody stays recognizable all session.
             var motif = MotifFactory.Generate(
-                Fnv.Hash($"motif|{spec.Preset}|{spec.Scale}|{spec.Root}|{spec.Bpm}|{spec.LoopBars}"),
+                Fnv.Hash($"motif|{spec.Preset}|{spec.Scale}|{spec.Root}"),
                 scale.Intervals.Count);
             var answer = MotifFactory.WithResolvedEnding(motif);
             int melodyBase = root + 12; // the tune sits an octave above the root

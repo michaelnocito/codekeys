@@ -100,8 +100,9 @@ public sealed class MainWindow : Form
 
     private void OnSignalTick(object? sender, EventArgs e)
     {
-        if (_moodPicker.SelectedItem is not BeatPreset mood) return;
-        _beat.UpdateGroove(SignalsToBeat.Of(_signals.Snapshot(), mood));
+        // Feed the conductor the latest typing arousal; it steers the beat gently at the next loop
+        // boundary. The mood (scale/root/tempo range) only changes via the Mood picker → SetSpec.
+        _beat.Observe(Conductor.Estimate(_signals.Snapshot()));
     }
 
     [DllImport("user32.dll")]
