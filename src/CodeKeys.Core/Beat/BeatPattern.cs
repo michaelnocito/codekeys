@@ -153,24 +153,32 @@ public static class BeatPattern
                 hits.Add(new BeatHit(steps - 1, BeatLayer.Ghost, root + 24, 0.30, SwingAt(steps - 1)));
         }
 
-        // Bowl: a Tibetan singing bowl rings on the downbeat of bar 0 of every other loop. Long
-        // resonant tail (~2.5s) overlaps into the rest of the loop — the slow shimmering bell that
-        // sits behind the bass hum. For chakra presets, locked to the Solfeggio frequency; otherwise
-        // the root or fifth, picked deterministically from the cycle.
-        if (Has(BeatLayer.Bowl) && cycle % 2 == 0)
+        // Bowl: a Tibetan singing bowl rings on the downbeat of every loop (Tibetan Beat), and
+        // chakras get a second strike at the loop's midpoint so the rings overlap into a continuous
+        // shimmer (Mike: "more of them, especially in the chakra ones; can dominate the base more").
+        // The bowl voice itself fades in smoothly (350ms smoothstep) so the strike never crashes in.
+        if (Has(BeatLayer.Bowl))
         {
-            int midi;
             var chakraFreq = SignalsToBeat.ChakraBowlFreq(spec.Preset);
+            int primaryMidi;
             if (chakraFreq.HasValue)
-            {
-                midi = SignalsToBeat.ChakraBowlMidi(spec.Preset);
-            }
+                primaryMidi = SignalsToBeat.ChakraBowlMidi(spec.Preset);
             else
             {
                 int deg = rng.Next() < 0.30 ? 4 : 0;
-                midi = scale.DegreeToMidi(root, deg);
+                primaryMidi = scale.DegreeToMidi(root, deg);
             }
-            hits.Add(new BeatHit(0, BeatLayer.Bowl, midi, 0.55, 0));
+
+            // Strike 1 — bar 0 downbeat (every loop).
+            hits.Add(new BeatHit(0, BeatLayer.Bowl, primaryMidi, 0.70, 0));
+
+            // Strike 2 — chakras only, at the loop's midpoint. Doubles the density and lets the
+            // strikes overlap into a continuous shimmer the bass can't bury.
+            if (chakraFreq.HasValue && spec.LoopBars >= 2)
+            {
+                int midStep = (spec.LoopBars / 2) * 16;
+                hits.Add(new BeatHit(midStep, BeatLayer.Bowl, primaryMidi, 0.60, 0));
+            }
         }
 
         // Splash: a rare, soft, dark one-off for variety — an "appearance", not a layer that rides

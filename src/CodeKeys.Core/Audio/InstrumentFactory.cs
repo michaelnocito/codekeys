@@ -120,8 +120,11 @@ public static class InstrumentFactory
     /// classic ratios (1, 2.76, 5.4, 8.93) — bell-like, not a clean harmonic series — under a
     /// soft attack and a long resonant decay. Each partial is paired with a slightly detuned
     /// copy, producing the characteristic shimmering "warble" you hear from a real bowl.
+    /// <para><paramref name="attack"/> is the fade-in time (s). A longer attack reads as "bowed"
+    /// rather than "struck" — the bowl swells in instead of crashing in.</para>
     /// </summary>
-    public static SampleBuffer CreateSingingBowl(double freq, int sampleRate, double durationSeconds = 1.4, float gain = 0.85f)
+    public static SampleBuffer CreateSingingBowl(double freq, int sampleRate,
+        double durationSeconds = 1.4, float gain = 0.85f, double attack = 0.06)
     {
         if (freq <= 0) throw new ArgumentOutOfRangeException(nameof(freq));
 
@@ -132,13 +135,21 @@ public static class InstrumentFactory
         double[] ratios = { 1.00, 2.76, 5.40, 8.93 };
         double[] amps   = { 1.00, 0.55, 0.28, 0.14 };
         double[] decays = { 1.0, 1.5, 2.3, 3.2 };
-        const double attack = 0.06;       // soft, padded strike
         const double detuneHz = 0.6;      // small detune between paired partials -> shimmer
+
+        // Smoothstep fade-in (3p²-2p³) over the attack window — softer than a linear ramp, so
+        // the bowl swells in with no perceptible attack onset.
+        double SmoothAttack(double t)
+        {
+            if (t >= attack) return 1.0;
+            double p = t / attack;
+            return p * p * (3 - 2 * p);
+        }
 
         for (int i = 0; i < count; i++)
         {
             double t = i / (double)sampleRate;
-            double att = t < attack ? t / attack : 1.0;
+            double att = SmoothAttack(t);
             double v = 0;
             for (int k = 0; k < ratios.Length; k++)
             {
@@ -154,7 +165,8 @@ public static class InstrumentFactory
 
         var buf = new SampleBuffer(s, sampleRate);
         buf.NormalizeInPlace(0.85f);
-        SynthVoiceFactory.FadeOutTail(s, sampleRate, 0.012);
+        // Longer fade-out tail (50ms vs 12ms) so the bowl decays into silence without a final clip.
+        SynthVoiceFactory.FadeOutTail(s, sampleRate, 0.050);
         return buf;
     }
 

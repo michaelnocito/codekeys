@@ -216,8 +216,12 @@ public sealed class BeatSequencer : ISampleProvider
                                 new Envelope { Attack = 0.002, Decay = 1.4, Sustain = 0.0, Release = 0.1 },
                                 holdSeconds: 0.0, gain: 0.40f),
             BeatLayer.Ghost => PercussionFactory.CreateTap(f, _rate, decaySeconds: 0.045, noiseAmount: 0.25),
-            // Tibetan singing bowl: long resonant inharmonic strike. Atmospheric; rings for ~2.5s.
-            BeatLayer.Bowl => InstrumentFactory.CreateSingingBowl(f, _rate, durationSeconds: 2.5, gain: 0.45f),
+            // Tibetan singing bowl: long resonant inharmonic ring. Slow smoothstep attack (350ms)
+            // so it swells in instead of striking, longer duration (3.6s) so the natural decay
+            // completes inside the buffer with no audible tail clip. Higher gain than before so the
+            // bowls lead the atmosphere over the bass hum (per Mike: "bowls dominate the base").
+            BeatLayer.Bowl => InstrumentFactory.CreateSingingBowl(f, _rate,
+                                durationSeconds: 3.6, gain: 0.60f, attack: 0.35),
             _ => SynthVoiceFactory.CreateTone(f, _rate, Waveform.Sine, Envelope.Pluck)
         };
         return buf.Samples;
