@@ -12,36 +12,43 @@ public readonly record struct BeatHit(int Step, BeatLayer Layer, int Midi, doubl
 /// </summary>
 public static class BeatPattern
 {
-    /// <summary>Build the hit timeline for one loop of <paramref name="spec"/>.</summary>
-    public static IReadOnlyList<BeatHit> Build(BeatSpec spec)
+    /// <summary>
+    /// Build the hit timeline for one loop of <paramref name="spec"/>. <paramref name="cycle"/> is
+    /// the loop index — it seeds the per-loop variation, so consecutive loops differ (varying
+    /// off-beats, marimba notes, and a periodic fill) instead of repeating dead. The quarter-note
+    /// downbeat pulse stays constant, so the groove still "maintains the pulse".
+    /// </summary>
+    public static IReadOnlyList<BeatHit> Build(BeatSpec spec, int cycle = 0)
     {
         int steps = spec.LoopBars * 16;
         var scale = SignalsToBeat.ToScale(spec.Scale);
         int root = NoteUtil.ParseNoteName(spec.Root);
         int span = scale.DegreeSpan(2);
 
-        // Seed from the spec so the same beat is always laid out the same way.
-        var rng = new Prng(Fnv.Hash($"{spec.Preset}|{spec.Bpm}|{spec.Root}|{spec.LoopBars}|{spec.Density:F3}"));
+        // Seed from the spec + the loop index so each loop gets its own (deterministic) variation.
+        var rng = new Prng(Fnv.Hash($"{spec.Preset}|{spec.Bpm}|{spec.Root}|{spec.LoopBars}|{spec.Density:F3}|{cycle}"));
         var accents = new HashSet<int>(spec.Accents);
         var hits = new List<BeatHit>();
 
         bool Has(BeatLayer l) => Array.IndexOf(spec.Layers, l) >= 0;
+        double SwingAt(int step) => (step % 2 == 1) ? spec.Swing : 0.0;
 
         for (int s = 0; s < steps; s++)
         {
-            double swing = (s % 2 == 1) ? spec.Swing : 0.0;
+            double swing = SwingAt(s);
             double accentGain = accents.Contains(s) ? 1.0 : 0.8;
 
-            // Pulse: kick on every beat (every 4 steps); an off-beat appears when busy.
+            // Pulse: a steady quarter-note kick (the anchor that always holds), plus a light
+            // off-beat "and" kick that comes and goes per loop — subtle syncopation, more when busy.
             if (Has(BeatLayer.Pulse))
             {
                 if (s % 4 == 0)
                     hits.Add(new BeatHit(s, BeatLayer.Pulse, root, accentGain, swing));
-                else if (s % 4 == 2 && spec.Density > 0.6)
-                    hits.Add(new BeatHit(s, BeatLayer.Pulse, root, 0.6, swing));
+                else if (s % 2 == 0 && rng.Next() < spec.Density * 0.30)
+                    hits.Add(new BeatHit(s, BeatLayer.Pulse, root, 0.5, swing));
             }
 
-            // Marimba: density-driven scale notes on the 8th-note grid.
+            // Marimba: density-driven scale notes on the 8th-note grid (varies per loop via the seed).
             if (Has(BeatLayer.Marimba) && s % 2 == 0 && rng.Next() < spec.Density * 0.6)
             {
                 int degree = (int)(rng.Next() * span);
@@ -54,11 +61,20 @@ public static class BeatPattern
                 hits.Add(new BeatHit(s, BeatLayer.Ghost, root + 24, 0.35, swing));
         }
 
+        // Back-beat fill: every other loop, a soft pickup into the next downbeat so the groove
+        // breathes instead of looping identically. A kick on the final "and" (kept on the beat-grid
+        // so the pulse stays clean) plus an optional ghost tick on the last 16th.
+        if (Has(BeatLayer.Pulse) && cycle % 2 == 1 && steps >= 4)
+        {
+            hits.Add(new BeatHit(steps - 2, BeatLayer.Pulse, root, 0.55, SwingAt(steps - 2)));
+            if (Has(BeatLayer.Ghost))
+                hits.Add(new BeatHit(steps - 1, BeatLayer.Ghost, root + 24, 0.30, SwingAt(steps - 1)));
+        }
+
         // Melody: a one-bar motif laid out per bar as call-and-response. Even bars state the
         // motif; odd bars "answer" it by resolving to the tonic. The motif is seeded only from
-        // the spec's *stable* identity (preset/scale/root/bpm/loopBars) — NOT density or accents —
-        // so per-loop Evolve drift never scrambles the tune; it stays recognizable. This replaces
-        // the old ascending scale run.
+        // the spec's *stable* identity (preset/scale/root) — NOT bpm/density/accents/cycle — so
+        // neither tempo drift nor per-loop variation scrambles the tune; it stays recognizable.
         if (Has(BeatLayer.Melody))
         {
             // Seed ONLY from tonal identity (preset/scale/root) — NOT bpm/density/loopBars — so the

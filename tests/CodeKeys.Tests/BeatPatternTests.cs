@@ -31,6 +31,36 @@ public class BeatPatternTests
     }
 
     [Fact]
+    public void Same_Cycle_Is_Deterministic()
+    {
+        Assert.Equal(BeatPattern.Build(FullSpec(), 7), BeatPattern.Build(FullSpec(), 7));
+    }
+
+    [Fact]
+    public void Back_Beat_Varies_Loop_To_Loop()
+    {
+        // Consecutive loops must differ — that's the per-loop variance (off-beats, marimba, fill).
+        Assert.NotEqual(BeatPattern.Build(FullSpec(), 0), BeatPattern.Build(FullSpec(), 1));
+    }
+
+    [Fact]
+    public void Quarter_Note_Pulse_Is_Steady_Across_Cycles()
+    {
+        // The anchor pulse (a kick on every quarter) must be present in every loop, so variance
+        // never costs us the steady pulse.
+        var spec = FullSpec();
+        int steps = spec.LoopBars * 16;
+        var expected = Enumerable.Range(0, steps).Where(s => s % 4 == 0).ToList();
+        for (int c = 0; c < 4; c++)
+        {
+            var quarterKicks = BeatPattern.Build(spec, c)
+                .Where(h => h.Layer == BeatLayer.Pulse && h.Step % 4 == 0)
+                .Select(h => h.Step).Distinct().OrderBy(x => x).ToList();
+            Assert.Equal(expected, quarterKicks);
+        }
+    }
+
+    [Fact]
     public void All_Hits_Are_Within_The_Loop()
     {
         var spec = FullSpec();

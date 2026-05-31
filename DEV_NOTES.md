@@ -122,9 +122,19 @@ adjustments always return toward. Findings + changes (sources in docs/sound-desi
 - **Considered but deferred**: cognitive-load ducking (lower whole mix when working
   hard). Grounded but subtle — gated on an ear test.
 
+### Back-beat variance (2026-05-31)
+Mike wanted the backing beat to stop looping dead. `BeatPattern.Build` now takes a
+`cycle` (loop index, threaded from `BeatSequencer._loopCount`, reset on SetSpec):
+- rng seed includes `cycle` → off-beat kicks + marimba notes vary loop to loop;
+- the quarter-note kick (downbeat) stays constant = the anchor pulse is never lost
+  (`Quarter_Note_Pulse_Is_Steady_Across_Cycles` test);
+- every other loop adds a soft pickup fill (kick on the last "and" + a ghost tick).
+Busyness scales with `Density` (so arousal still modulates it). 3 new tests.
+
 ### NEXT (after Mike's ear test)
 - **Re-tune by ear** the above knobs (all consts in `Conductor.cs` / easy to find;
-  `_keysLevel`/`_bedLevel` in `AudioEngine.cs`).
+  `_keysLevel`/`_bedLevel` in `AudioEngine.cs`). Want more/less back-beat variance?
+  Knobs: off-beat prob `Density*0.30`, fill cadence `cycle % 2`, in `BeatPattern`.
   Does it now feel like background that holds the pulse and only guides when sure?
 - Possible deeper **voice enrichment** from the library (soft Rhodes/bells/richer
   pad) — held back because Mike likes the base tone; pick by ear next.

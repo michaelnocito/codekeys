@@ -44,6 +44,7 @@ public sealed class BeatSequencer : ISampleProvider
     private BeatSpec _spec = null!; // set in ctor via SetSpec
     private double _userArousal = 0.5;  // latest typing arousal (0..1); updated live via Observe
     private long _sessionSamples;       // samples since the session (mood) started → arc clock
+    private int _loopCount;             // loop index → seeds the per-loop back-beat variation
     private double _timeScale = 1.0;    // compresses the arc clock for quick auditioning (1 = real time)
     private Scheduled[] _schedule = Array.Empty<Scheduled>();
     private long _loopLen = 1;
@@ -70,6 +71,7 @@ public sealed class BeatSequencer : ISampleProvider
             // dt = 0 → tempo unchanged; this just applies the arc's opening (establish) layers/density.
             _spec = Conductor.Step(spec, _userArousal, elapsedSeconds: 0, dtSeconds: 0, lo, hi);
             _sessionSamples = 0;
+            _loopCount = 0;
             BakeBank(_spec);
             BuildSchedule();
             _playhead = 0;
@@ -152,7 +154,7 @@ public sealed class BeatSequencer : ISampleProvider
 
     private void BuildSchedule()
     {
-        var hits = BeatPattern.Build(_spec);
+        var hits = BeatPattern.Build(_spec, _loopCount);
         int steps = _spec.LoopBars * 16;
         double samplesPerStep = 60.0 / _spec.Bpm / 4.0 * _rate;
         _loopLen = Math.Max(1, (long)(steps * samplesPerStep));
@@ -207,6 +209,7 @@ public sealed class BeatSequencer : ISampleProvider
                     double dt = _loopLen / (double)_rate;                          // real time → ramp stays gentle
                     var (lo, hi) = SignalsToBeat.BpmRange(_spec.Preset);
                     _spec = Conductor.Step(_spec, _userArousal, elapsed, dt, lo, hi);
+                    _loopCount++;
                     BuildSchedule(); // reuses the baked bank (scale/root unchanged)
                 }
             }
