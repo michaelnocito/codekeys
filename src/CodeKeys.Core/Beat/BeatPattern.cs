@@ -57,6 +57,21 @@ public static class BeatPattern
                     hits.Add(new BeatHit(s, BeatLayer.Pulse, root, 0.5, swing));
             }
 
+            // Bass: low, warm root-anchored notes — the body of the "blanket". Mostly the root with
+            // an occasional fifth; an extra note appears when it's fuller (warmer). Low register, no
+            // high tones. Density (= the conductor's warmth) drives how full it gets.
+            if (Has(BeatLayer.Bass))
+            {
+                if (s % 8 == 0)
+                {
+                    int deg = rng.Next() < 0.25 ? 4 : 0; // mostly root, sometimes the fifth
+                    int midi = scale.DegreeToMidi(root, deg);
+                    hits.Add(new BeatHit(s, BeatLayer.Bass, midi, accents.Contains(s) ? 0.55 : 0.45, swing));
+                }
+                else if (s % 4 == 0 && rng.Next() < spec.Density * 0.5)
+                    hits.Add(new BeatHit(s, BeatLayer.Bass, root, 0.4, swing));
+            }
+
             // Marimba: density-driven scale notes on the 8th-note grid (varies per loop via the seed).
             if (Has(BeatLayer.Marimba) && s % 2 == 0 && rng.Next() < spec.Density * 0.6)
             {

@@ -167,10 +167,25 @@ sparse to the full coherent beat — subtle, song-like, "barely noticeable at fi
   audition the whole 10-min arc in ~30s. UI: "🎚 Buildup (slow 10-min build)".
   Note: buildup bypasses the adaptive thermostat (Reactivity slider doesn't apply).
 
+### Bass + drums "blanket" pivot (2026-05-31) — IMPORTANT
+Mike: the high tones (xylophone/marimba, chime, and the high melody) kept pulling
+his focus. Wants a warm low **blanket, not a leash** — "warmer when needed, lighter
+when cooling off." Key insight: that warmth behavior is ALREADY the conductor
+(density rises when under-stimulated, falls when over → counter-active). So this was
+an **instrument change**, not a behavior change:
+- New **`BeatLayer.Bass`**: warm low WarmPad body at the root register (root + an
+  occasional fifth), density-scaled fullness ("warmer" = more bass). Baked in
+  `BeatSequencer`; pattern block in `BeatPattern`.
+- **Conductor now activates only Bass** (from the Statement phase) + the base
+  Pad/Pulse(kick)/Ghost(soft tap). **Melody, Marimba, Chime are filtered OUT** of
+  both the arc (`Step`) and `BuildupSpec` — no high tones. Their code/voices remain
+  (dormant), so they're easy to bring back if Mike wants.
+- So the active bed = **Pad (warmth) + Pulse/Ghost (drums) + Bass (body)**.
+
 ### NEXT (after Mike's ear test)
 - **Re-tune by ear** the consts in `Conductor.cs`; `_keysLevel`/`_bedLevel` in
-  `AudioEngine.cs`. Back-beat variance knobs: off-beat prob `Density*0.30`, fill
-  cadence `cycle % 2`; chime density `Density*0.10` in `BeatPattern`. Buildup knobs:
+  `AudioEngine.cs`. Bass knobs: register (`DegreeToMidi(root, …)` — go root-12 for
+  deeper if his speakers handle it), fill prob `Density*0.5`, bake gain 0.50. Buildup knobs:
   `BuildupSeconds`, the envelope curve, layer thresholds, `_buildupGain` floor.
   Could add more soft effects (rare shimmer/pad swell) — same pattern as Chime.
   Does it now feel like background that holds the pulse and only guides when sure?

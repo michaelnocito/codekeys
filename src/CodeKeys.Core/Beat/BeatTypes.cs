@@ -7,10 +7,11 @@ public enum BeatPreset { Focused, Relaxed, Burnout, Silly }
 public enum BeatScale { Dorian, Major, MajorPentatonic }
 
 /// <summary>
-/// The voices a beat can activate. <see cref="Melody"/> plays the developing motif;
-/// <see cref="Chime"/> adds sparse, soft high bells (sparkle) that ebb and flow with density.
+/// The voices a beat can activate. <see cref="Bass"/> is the warm low body ("blanket"); Pulse +
+/// Ghost are the drums; Pad is warmth. <see cref="Melody"/>/<see cref="Marimba"/>/<see cref="Chime"/>
+/// are higher-register voices kept in code but no longer used by the conductor (they pulled focus).
 /// </summary>
-public enum BeatLayer { Pad, Pulse, Marimba, Melody, Chime, Ghost }
+public enum BeatLayer { Pad, Pulse, Marimba, Melody, Chime, Bass, Ghost }
 
 /// <summary>
 /// Typing telemetry captured over a session window. Fed into <see cref="SignalsToBeat"/>.

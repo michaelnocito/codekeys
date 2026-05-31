@@ -160,7 +160,8 @@ public sealed class BeatSequencer : ISampleProvider
         Put(BeatLayer.Pulse, root);
         Put(BeatLayer.Ghost, root + 24);
         foreach (int deg in new[] { 0, 2, 4 }) Put(BeatLayer.Pad, scale.DegreeToMidi(root, deg));
-        foreach (int deg in new[] { 0, 2, 4 }) Put(BeatLayer.Chime, scale.DegreeToMidi(root + 24, deg)); // high sparkle
+        foreach (int deg in new[] { 0, 4 }) Put(BeatLayer.Bass, scale.DegreeToMidi(root, deg));     // warm low body
+        foreach (int deg in new[] { 0, 2, 4 }) Put(BeatLayer.Chime, scale.DegreeToMidi(root + 24, deg)); // high sparkle (unused)
         for (int d = 0; d < span; d++)
         {
             int midi = scale.DegreeToMidi(root + 12, d);
@@ -179,6 +180,10 @@ public sealed class BeatSequencer : ISampleProvider
                                 new Envelope { Attack = 0.06, Decay = 0.5, Sustain = 0.6, Release = 0.9 },
                                 holdSeconds: 1.2, gain: 0.35f),
             BeatLayer.Marimba => InstrumentFactory.CreateMarimba(f, _rate),
+            // Warm low bass — sustained pad-ish body, the heart of the "blanket". No high content.
+            BeatLayer.Bass => SynthVoiceFactory.CreateTone(f, _rate, Waveform.WarmPad,
+                                new Envelope { Attack = 0.02, Decay = 0.35, Sustain = 0.5, Release = 0.5 },
+                                holdSeconds: 0.35, gain: 0.50f),
             // Soft, ambient melody — gentle fade-in + long tail so it floats behind the work instead
             // of plucking to the front (same WarmPad tone Mike likes, just sat well back).
             BeatLayer.Melody => SynthVoiceFactory.CreateTone(f, _rate, Waveform.WarmPad,

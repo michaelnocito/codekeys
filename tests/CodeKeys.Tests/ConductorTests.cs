@@ -141,31 +141,31 @@ public class ConductorTests
 
     // ---- session arc ----
 
+    private static void AssertNoHighTones(BeatLayer[] layers)
+    {
+        Assert.DoesNotContain(BeatLayer.Melody, layers);
+        Assert.DoesNotContain(BeatLayer.Marimba, layers);
+        Assert.DoesNotContain(BeatLayer.Chime, layers);
+    }
+
     [Fact]
-    public void Step_In_Establish_Has_No_Melody_Or_Marimba()
+    public void Step_In_Establish_Is_Just_The_Base_No_Bass_No_High_Tones()
     {
         var next = Conductor.Step(Spec(), 0.6, elapsedSeconds: 10, dtSeconds: 5, Lo, Hi);
-        Assert.DoesNotContain(BeatLayer.Melody, next.Layers);
-        Assert.DoesNotContain(BeatLayer.Marimba, next.Layers);
-        Assert.DoesNotContain(BeatLayer.Chime, next.Layers);
-        Assert.Contains(BeatLayer.Pulse, next.Layers); // base voices stay
+        Assert.DoesNotContain(BeatLayer.Bass, next.Layers);
+        AssertNoHighTones(next.Layers);
+        Assert.Contains(BeatLayer.Pulse, next.Layers); // base drums stay
     }
 
     [Fact]
-    public void Step_In_Statement_Adds_Melody_And_Chime_But_Not_Marimba()
+    public void Step_From_Statement_Adds_Bass_And_Never_High_Tones()
     {
-        var next = Conductor.Step(Spec(), 0.6, elapsedSeconds: 200, dtSeconds: 5, Lo, Hi);
-        Assert.Contains(BeatLayer.Melody, next.Layers);
-        Assert.Contains(BeatLayer.Chime, next.Layers);
-        Assert.DoesNotContain(BeatLayer.Marimba, next.Layers);
-    }
-
-    [Fact]
-    public void Step_In_Development_Adds_Melody_And_Marimba()
-    {
-        var next = Conductor.Step(Spec(), 0.6, elapsedSeconds: 700, dtSeconds: 5, Lo, Hi);
-        Assert.Contains(BeatLayer.Melody, next.Layers);
-        Assert.Contains(BeatLayer.Marimba, next.Layers);
+        foreach (var t in new[] { 200.0, 700.0, 2000.0 }) // statement, development, flow
+        {
+            var next = Conductor.Step(Spec(), 0.6, elapsedSeconds: t, dtSeconds: 5, Lo, Hi);
+            Assert.Contains(BeatLayer.Bass, next.Layers);
+            AssertNoHighTones(next.Layers);
+        }
     }
 
     [Theory]
@@ -212,13 +212,13 @@ public class ConductorTests
 
         Assert.True(start.Density < 0.10);          // huge note spacing at the very start
         Assert.True(end.Density > start.Density);   // fills in
-        // Layers assemble: nothing but the base pulse at the start; full texture by the end.
-        Assert.DoesNotContain(BeatLayer.Melody, start.Layers);
-        Assert.DoesNotContain(BeatLayer.Marimba, start.Layers);
+        // Layers assemble: just the base pulse at the start; warm pad+bass by the end, no high tones.
+        Assert.DoesNotContain(BeatLayer.Pad, start.Layers);
+        Assert.DoesNotContain(BeatLayer.Bass, start.Layers);
         Assert.Contains(BeatLayer.Pulse, start.Layers);
-        Assert.Contains(BeatLayer.Melody, end.Layers);
-        Assert.Contains(BeatLayer.Chime, end.Layers);
-        Assert.Contains(BeatLayer.Marimba, end.Layers);
+        Assert.Contains(BeatLayer.Pad, end.Layers);
+        Assert.Contains(BeatLayer.Bass, end.Layers);
+        AssertNoHighTones(end.Layers);
     }
 
     [Fact]
