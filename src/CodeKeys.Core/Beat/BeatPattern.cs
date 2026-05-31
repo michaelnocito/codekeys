@@ -54,7 +54,9 @@ public static class BeatPattern
                     // immediate confirmation. At intensity == 1.0 short-circuits byte-identical.
                     bool isBarStart = s % 16 == 0;
                     bool firstHitEver = cycle == 0 && s == 0;
-                    double prob = isBarStart ? 0.15 + 0.85 * intensity : intensity;
+                    // Lower bar-start floor so the early cycle has occasional, sparse "pops"
+                    // sitting over the continuous Bass hum instead of frequent kicks.
+                    double prob = isBarStart ? 0.05 + 0.85 * intensity : intensity * 0.5;
                     if (firstHitEver || intensity >= 1.0 || rng.Next() < prob)
                         hits.Add(new BeatHit(s, BeatLayer.Pulse, root, accentGain, swing));
                 }

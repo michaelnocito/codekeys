@@ -175,9 +175,9 @@ public sealed class BeatSequencer : ISampleProvider
         SampleBuffer buf = layer switch
         {
             // Atmospheric pulse — a pure deep sine with a soft attack and long sustain (no pitch
-            // drop, no click). Reads as a warm "hummmm" rather than a driving kick — gentler in the
-            // mix, less of a melodic-feeling transient pulling at attention.
-            BeatLayer.Pulse => PercussionFactory.CreateSub(f, _rate, decaySeconds: 0.55, gain: 0.55f),
+            // drop, no click). Reads as a warm "hummmm" rather than a driving kick. Quieter than the
+            // Bass hum, so it sits as a gentle occasional accent over the continuous low foundation.
+            BeatLayer.Pulse => PercussionFactory.CreateSub(f, _rate, decaySeconds: 0.55, gain: 0.40f),
             BeatLayer.Pad => SynthVoiceFactory.CreateTone(f, _rate, Waveform.WarmPad,
                                 new Envelope { Attack = 0.06, Decay = 0.5, Sustain = 0.6, Release = 0.9 },
                                 holdSeconds: 1.2, gain: 0.35f),

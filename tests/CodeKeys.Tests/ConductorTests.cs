@@ -150,13 +150,14 @@ public class ConductorTests
     }
 
     [Fact]
-    public void Step_Start_Is_Just_The_Lone_Tapper_No_Other_Voices()
+    public void Step_Start_Has_Bass_Hum_And_Pulse_No_Other_Voices()
     {
-        // At t=0 only Pulse — the "person 1 tapping". Bass/Ghost/Splash all wait their turn.
+        // From t=0 the deep Bass hum is the foundation (Mike's favourite) + Pulse for accents.
+        // Ghost taps and Splashes wait their turn in the additive build.
         var next = Conductor.Step(Spec(), 0.6, elapsedSeconds: 0, dtSeconds: 5, Lo, Hi);
         Assert.Contains(BeatLayer.Pulse, next.Layers);
+        Assert.Contains(BeatLayer.Bass, next.Layers);
         Assert.DoesNotContain(BeatLayer.Ghost, next.Layers);
-        Assert.DoesNotContain(BeatLayer.Bass, next.Layers);
         Assert.DoesNotContain(BeatLayer.Splash, next.Layers);
         Assert.DoesNotContain(BeatLayer.Pad, next.Layers); // never the chord
         AssertNoHighTones(next.Layers);
@@ -166,22 +167,20 @@ public class ConductorTests
     [Fact]
     public void Step_Voices_Enter_One_At_A_Time_Across_The_Build()
     {
-        // The additive-minimalism contract: Ghost > Bass > Splash, each waiting for the next
-        // envelope threshold. By the end of the build, everything we keep is present.
+        // Bass + Pulse from the start; Ghost taps at >0.30 envelope; Splashes at >0.70.
         var t0   = Conductor.Step(Spec(), 0.6, 0,    5, Lo, Hi);
-        var t300 = Conductor.Step(Spec(), 0.6, 300,  5, Lo, Hi); // envelope 0.25
         var t450 = Conductor.Step(Spec(), 0.6, 450,  5, Lo, Hi); // envelope 0.5625
         var tEnd = Conductor.Step(Spec(), 0.6, Conductor.BuildupSeconds, 5, Lo, Hi);
 
-        Assert.DoesNotContain(BeatLayer.Ghost, t0.Layers);
-        Assert.Contains(BeatLayer.Ghost,  t300.Layers); // ~5 min: soft taps have joined
-        Assert.DoesNotContain(BeatLayer.Bass, t300.Layers); // bass hasn't yet
-        Assert.Contains(BeatLayer.Bass,   t450.Layers); // ~7.5 min: deep bass has joined
-        Assert.Contains(BeatLayer.Splash, tEnd.Layers); // by full build, splashes too
+        Assert.DoesNotContain(BeatLayer.Ghost,  t0.Layers);
+        Assert.Contains(BeatLayer.Ghost,        t450.Layers); // ~7.5 min: soft taps joined
+        Assert.DoesNotContain(BeatLayer.Splash, t450.Layers);
+        Assert.Contains(BeatLayer.Splash,       tEnd.Layers);
 
-        foreach (var spec in new[] { t0, t300, t450, tEnd })
+        foreach (var spec in new[] { t0, t450, tEnd })
         {
-            Assert.Contains(BeatLayer.Pulse, spec.Layers); // tapper is there throughout
+            Assert.Contains(BeatLayer.Pulse, spec.Layers); // accent throughout
+            Assert.Contains(BeatLayer.Bass,  spec.Layers); // hum throughout (the foundation)
             Assert.DoesNotContain(BeatLayer.Pad, spec.Layers);
             AssertNoHighTones(spec.Layers);
         }
@@ -294,15 +293,16 @@ public class ConductorTests
     }
 
     [Fact]
-    public void Step_Returns_To_Silence_At_End_Of_Cycle()
+    public void Step_End_Of_Cycle_Returns_To_Foundation_Hum_And_Pulse()
     {
-        // The end of the fall = silence again: voices are gone, density at the floor.
-        var silent = Conductor.Step(Spec(), 0.5, elapsedSeconds: Conductor.CycleSeconds, dtSeconds: 5, Lo, Hi);
-        Assert.Contains(BeatLayer.Pulse, silent.Layers);
-        Assert.DoesNotContain(BeatLayer.Bass, silent.Layers);
-        Assert.DoesNotContain(BeatLayer.Splash, silent.Layers);
-        Assert.DoesNotContain(BeatLayer.Ghost, silent.Layers);
-        Assert.True(silent.Density < 0.10);
+        // The end of the fall = back to the foundation: Bass hum + Pulse, with Ghost/Splash gone.
+        // Density drops to the floor so the schedule is very sparse.
+        var quiet = Conductor.Step(Spec(), 0.5, elapsedSeconds: Conductor.CycleSeconds, dtSeconds: 5, Lo, Hi);
+        Assert.Contains(BeatLayer.Pulse, quiet.Layers);
+        Assert.Contains(BeatLayer.Bass,  quiet.Layers); // hum persists across the cycle endpoints
+        Assert.DoesNotContain(BeatLayer.Splash, quiet.Layers);
+        Assert.DoesNotContain(BeatLayer.Ghost,  quiet.Layers);
+        Assert.True(quiet.Density < 0.10);
     }
 
     [Fact]

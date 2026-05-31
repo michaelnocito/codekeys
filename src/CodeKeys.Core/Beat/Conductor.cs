@@ -159,17 +159,17 @@ public static class Conductor
         // by the same envelope, so even within "low density" the actual hits are still gated.
         double density = Clamp(0.04 + 0.55 * build + 0.20 * next * build, 0.04, 0.85);
 
-        // Voices enter ONE AT A TIME, Reich/drum-circle style. Pulse is the lone tapper from the
-        // start (but is itself gated to a near-silent heartbeat early via the renderer's note-fill).
-        // Then Ghost taps join, then the deep Bass boom, then rare Splashes — each at a build
-        // threshold rather than all-at-once. No Pad chord, no high tones.
+        // The deep Bass hum is the FOUNDATION — always on from t=0, because Mike loves the
+        // continuous low rolling drone (the half-bar Bass hits have 2s decay, so they overlap into
+        // a persistent atmospheric hum). The Pulse is the gentle accent on top (sparser). Ghost
+        // taps and Splash colour enter on the additive build's schedule. No Pad chord, no high tones.
         var layers = current.Layers
             .Where(l => l is not (BeatLayer.Pad or BeatLayer.Melody or BeatLayer.Marimba or BeatLayer.Chime or BeatLayer.Bass or BeatLayer.Splash or BeatLayer.Ghost))
             .ToList();
-        if (!layers.Contains(BeatLayer.Pulse)) layers.Add(BeatLayer.Pulse); // person 1 — the tapper
-        if (build > 0.20) layers.Add(BeatLayer.Ghost);  // person 2 — soft taps (~ 4.5 min in)
-        if (build > 0.40) layers.Add(BeatLayer.Bass);   // person 3 — the low boom    (~ 6.3 min in)
-        if (build > 0.70) layers.Add(BeatLayer.Splash); // person 4 — rare colour     (~ 8.4 min in)
+        if (!layers.Contains(BeatLayer.Pulse)) layers.Add(BeatLayer.Pulse); // gentle accent
+        if (!layers.Contains(BeatLayer.Bass))  layers.Add(BeatLayer.Bass);  // the continuous hum
+        if (build > 0.30) layers.Add(BeatLayer.Ghost);  // soft taps join (~ 5.5 min in)
+        if (build > 0.70) layers.Add(BeatLayer.Splash); // rare colour    (~ 8.4 min in)
 
         return current with { Bpm = bpm, Density = density, Layers = layers.ToArray() };
     }
