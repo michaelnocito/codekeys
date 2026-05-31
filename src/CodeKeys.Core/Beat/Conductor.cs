@@ -162,14 +162,15 @@ public static class Conductor
         // The deep Bass hum is the FOUNDATION — always on from t=0, because Mike loves the
         // continuous low rolling drone (the half-bar Bass hits have 2s decay, so they overlap into
         // a persistent atmospheric hum). The Pulse is the gentle accent on top (sparser). Ghost
-        // taps and Splash colour enter on the additive build's schedule. No Pad chord, no high tones.
+        // taps, Bowl shimmer, and Splash colour enter on the additive build's schedule. No Pad chord, no high tones.
         var layers = current.Layers
-            .Where(l => l is not (BeatLayer.Pad or BeatLayer.Melody or BeatLayer.Marimba or BeatLayer.Chime or BeatLayer.Bass or BeatLayer.Splash or BeatLayer.Ghost))
+            .Where(l => l is not (BeatLayer.Pad or BeatLayer.Melody or BeatLayer.Marimba or BeatLayer.Chime or BeatLayer.Bass or BeatLayer.Splash or BeatLayer.Ghost or BeatLayer.Bowl))
             .ToList();
         if (!layers.Contains(BeatLayer.Pulse)) layers.Add(BeatLayer.Pulse); // gentle accent
         if (!layers.Contains(BeatLayer.Bass))  layers.Add(BeatLayer.Bass);  // the continuous hum
-        if (build > 0.30) layers.Add(BeatLayer.Ghost);  // soft taps join (~ 5.5 min in)
-        if (build > 0.70) layers.Add(BeatLayer.Splash); // rare colour    (~ 8.4 min in)
+        if (build > 0.30) layers.Add(BeatLayer.Ghost);  // soft taps   (~ 5.5 min in)
+        if (build > 0.50) layers.Add(BeatLayer.Bowl);   // bowl strikes (~ 7 min in)
+        if (build > 0.70) layers.Add(BeatLayer.Splash); // rare colour  (~ 8.4 min in)
 
         return current with { Bpm = bpm, Density = density, Layers = layers.ToArray() };
     }

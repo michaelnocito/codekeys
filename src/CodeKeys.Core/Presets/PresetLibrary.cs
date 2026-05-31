@@ -22,7 +22,6 @@ public static class PresetLibrary
     public static IReadOnlyList<Preset> All { get; } = new[]
     {
         Midnight(),
-        TibetanClub(),
         Pulse(),
         Thock(),
         Keyboard(),
@@ -115,37 +114,6 @@ public static class PresetLibrary
             var space = PercussionFactory.CreateKick(root * 0.75, rate, bodyDecaySeconds: 0.26, clickAmount: 0.07); // deepest thump
             var enter = PercussionFactory.CreateSnare(rate, decaySeconds: 0.16);                                    // occasional snare
             var backspace = PercussionFactory.CreateTap(root, rate, decaySeconds: 0.06, noiseAmount: 0.18);         // pop
-
-            var voices = KeyVoiceSet.BakeNotes(map, rate, RenderBlend, space, enter, backspace);
-            return new BakedPreset(map, voices);
-        });
-
-    // --- Tibetan Club: Midnight's deep-bass blend, with singing bowls up top ---
-    private static Preset TibetanClub() => new(
-        "tibetan-club", "Tibetan Club",
-        "Deep low bass and drum pops like Midnight, with Tibetan singing bowls on the high keys.",
-        rate =>
-        {
-            // Same A-minor pentatonic, A2 root, 2 octaves as Midnight so the low-bass character matches.
-            var map = new SpatialKeyMap(Scale.MinorPentatonic, NoteUtil.ParseNoteName("A2"), octaves: 2);
-            double root = NoteUtil.MidiToFrequency(map.RootMidi);
-
-            SampleBuffer RenderBlend(int i, int n, double freq)
-            {
-                // Top ~30% of pitches → singing bowls (the new flavour). The rest keep Midnight's
-                // alternating deep thump / drum pop so the low bass Mike loves is preserved.
-                if (i >= n * 0.70)
-                    return InstrumentFactory.CreateSingingBowl(freq, rate, durationSeconds: 1.4, gain: 0.55f);
-                return (i % 2 == 0)
-                    ? PercussionFactory.CreateKick(freq, rate, bodyDecaySeconds: 0.22, clickAmount: 0.08) // deep thump
-                    : PercussionFactory.CreateTap(freq, rate, decaySeconds: 0.07, noiseAmount: 0.20);     // drum pop
-            }
-
-            // Space = deepest thump (the bass), Enter = a struck bowl (the gong moment),
-            // Backspace = soft pop (light correction).
-            var space = PercussionFactory.CreateKick(root * 0.75, rate, bodyDecaySeconds: 0.26, clickAmount: 0.07);
-            var enter = InstrumentFactory.CreateSingingBowl(root * 2.0, rate, durationSeconds: 1.8, gain: 0.6f);
-            var backspace = PercussionFactory.CreateTap(root, rate, decaySeconds: 0.06, noiseAmount: 0.18);
 
             var voices = KeyVoiceSet.BakeNotes(map, rate, RenderBlend, space, enter, backspace);
             return new BakedPreset(map, voices);

@@ -160,6 +160,7 @@ public sealed class BeatSequencer : ISampleProvider
         foreach (int deg in new[] { 0, 2, 4 }) Put(BeatLayer.Pad, scale.DegreeToMidi(root, deg));      // chord (unused)
         foreach (int deg in new[] { 0, 4 }) Put(BeatLayer.Bass, scale.DegreeToMidi(root - 12, deg));   // deep low boom
         foreach (int deg in new[] { 0, 2, 4 }) Put(BeatLayer.Splash, scale.DegreeToMidi(root, deg));   // rare dark splash
+        foreach (int deg in new[] { 0, 4 }) Put(BeatLayer.Bowl, scale.DegreeToMidi(root, deg));        // Tibetan bowl strikes
         foreach (int deg in new[] { 0, 2, 4 }) Put(BeatLayer.Chime, scale.DegreeToMidi(root + 24, deg)); // high sparkle (unused)
         for (int d = 0; d < span; d++)
         {
@@ -202,6 +203,8 @@ public sealed class BeatSequencer : ISampleProvider
                                 new Envelope { Attack = 0.002, Decay = 1.4, Sustain = 0.0, Release = 0.1 },
                                 holdSeconds: 0.0, gain: 0.40f),
             BeatLayer.Ghost => PercussionFactory.CreateTap(f, _rate, decaySeconds: 0.045, noiseAmount: 0.25),
+            // Tibetan singing bowl: long resonant inharmonic strike. Atmospheric; rings for ~2.5s.
+            BeatLayer.Bowl => InstrumentFactory.CreateSingingBowl(f, _rate, durationSeconds: 2.5, gain: 0.45f),
             _ => SynthVoiceFactory.CreateTone(f, _rate, Waveform.Sine, Envelope.Pluck)
         };
         return buf.Samples;

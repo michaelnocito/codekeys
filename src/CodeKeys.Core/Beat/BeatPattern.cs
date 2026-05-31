@@ -106,6 +106,16 @@ public static class BeatPattern
                 hits.Add(new BeatHit(steps - 1, BeatLayer.Ghost, root + 24, 0.30, SwingAt(steps - 1)));
         }
 
+        // Bowl: a Tibetan singing bowl rings on the downbeat of bar 0 of every other loop. Long
+        // resonant tail (~2.5s) overlaps into the rest of the loop — the slow shimmering bell that
+        // sits behind the bass hum. Plays the root or fifth, deterministic from the cycle.
+        if (Has(BeatLayer.Bowl) && cycle % 2 == 0)
+        {
+            int deg = rng.Next() < 0.30 ? 4 : 0;
+            int midi = scale.DegreeToMidi(root, deg);
+            hits.Add(new BeatHit(0, BeatLayer.Bowl, midi, 0.55, 0));
+        }
+
         // Splash: a rare, soft, dark one-off for variety — an "appearance", not a layer that rides
         // the beat. One note at most per loop, on a beat, in the mid-low register with a slow attack.
         // High/bright sounds and sharp transients capture focus (auditory-salience research), so this

@@ -8,11 +8,12 @@ public enum BeatScale { Dorian, Major, MajorPentatonic }
 
 /// <summary>
 /// The voices a beat can activate. <see cref="Bass"/> = deep low boom (the body); Pulse + Ghost =
-/// the drums; <see cref="Splash"/> = a rare soft dark one-off for variety (an "appearance", never
-/// riding the beat). <see cref="Pad"/>/<see cref="Melody"/>/<see cref="Marimba"/>/<see cref="Chime"/>
-/// are kept in code but no longer used by the conductor (a chord or high tones that pulled focus).
+/// the drums; <see cref="Splash"/> = a rare soft dark one-off for variety; <see cref="Bowl"/> = a
+/// Tibetan singing bowl strike that rings for a couple seconds (sparse, atmospheric).
+/// <see cref="Pad"/>/<see cref="Melody"/>/<see cref="Marimba"/>/<see cref="Chime"/> are kept in
+/// code but no longer used by the conductor (a chord or high tones that pulled focus).
 /// </summary>
-public enum BeatLayer { Pad, Pulse, Marimba, Melody, Chime, Bass, Splash, Ghost }
+public enum BeatLayer { Pad, Pulse, Marimba, Melody, Chime, Bass, Splash, Ghost, Bowl }
 
 /// <summary>
 /// Typing telemetry captured over a session window. Fed into <see cref="SignalsToBeat"/>.
