@@ -31,6 +31,9 @@ public sealed class Scale
     public static readonly Scale NaturalMinor =
         new("minor", new[] { 0, 2, 3, 5, 7, 8, 10 });
 
+    public static readonly Scale Dorian =
+        new("dorian", new[] { 0, 2, 3, 5, 7, 9, 10 });
+
     /// <summary>Look a scale up by its manifest name; falls back to major pentatonic.</summary>
     public static Scale FromName(string? name) => name?.Trim().ToLowerInvariant() switch
     {
@@ -38,6 +41,7 @@ public sealed class Scale
         "minor-pentatonic" => MinorPentatonic,
         "major" => Major,
         "minor" or "natural-minor" => NaturalMinor,
+        "dorian" => Dorian,
         _ => MajorPentatonic
     };
 
