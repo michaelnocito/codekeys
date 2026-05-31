@@ -46,6 +46,7 @@ public sealed class BeatSequencer : ISampleProvider
     private long _sessionSamples;       // samples since the session (mood) started → arc clock
     private int _loopCount;             // loop index → seeds the per-loop back-beat variation
     private double _timeScale = 1.0;    // compresses the arc clock for quick auditioning (1 = real time)
+    private double _sensitivity = 1.25; // user reactivity multiplier (1 = baseline; default +25%)
     private Scheduled[] _schedule = Array.Empty<Scheduled>();
     private long _loopLen = 1;
     private long _playhead;
@@ -69,7 +70,7 @@ public sealed class BeatSequencer : ISampleProvider
         {
             var (lo, hi) = SignalsToBeat.BpmRange(spec.Preset);
             // dt = 0 → tempo unchanged; this just applies the arc's opening (establish) layers/density.
-            _spec = Conductor.Step(spec, _userArousal, elapsedSeconds: 0, dtSeconds: 0, lo, hi);
+            _spec = Conductor.Step(spec, _userArousal, elapsedSeconds: 0, dtSeconds: 0, lo, hi, _sensitivity);
             _sessionSamples = 0;
             _loopCount = 0;
             BakeBank(_spec);
@@ -103,6 +104,16 @@ public sealed class BeatSequencer : ISampleProvider
     {
         get { lock (_gate) return _timeScale; }
         set { lock (_gate) _timeScale = Math.Max(1.0, value); }
+    }
+
+    /// <summary>
+    /// How fast the beat reacts to typing (1 = baseline). Higher = snappier / less gradual, lower =
+    /// calmer. Exposed to the user as a slider; the default is 1.25 (+25%).
+    /// </summary>
+    public double Sensitivity
+    {
+        get { lock (_gate) return _sensitivity; }
+        set { lock (_gate) _sensitivity = Math.Max(0.0, value); }
     }
 
     private void BakeBank(BeatSpec spec)
@@ -208,7 +219,7 @@ public sealed class BeatSequencer : ISampleProvider
                     double elapsed = _sessionSamples / (double)_rate * _timeScale; // arc clock (demo-scalable)
                     double dt = _loopLen / (double)_rate;                          // real time → ramp stays gentle
                     var (lo, hi) = SignalsToBeat.BpmRange(_spec.Preset);
-                    _spec = Conductor.Step(_spec, _userArousal, elapsed, dt, lo, hi);
+                    _spec = Conductor.Step(_spec, _userArousal, elapsed, dt, lo, hi, _sensitivity);
                     _loopCount++;
                     BuildSchedule(); // reuses the baked bank (scale/root unchanged)
                 }

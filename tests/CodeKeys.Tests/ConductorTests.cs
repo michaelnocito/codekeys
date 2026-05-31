@@ -120,6 +120,15 @@ public class ConductorTests
     }
 
     [Fact]
+    public void Higher_Sensitivity_Reacts_Faster()
+    {
+        // Same inputs, more sensitivity → a bigger tempo move toward the target (less gradual).
+        var calm   = Conductor.Step(Spec(bpm: Lo), userArousal: 0.0, elapsedSeconds: 800, dtSeconds: 30, Lo, Hi, sensitivity: 0.5);
+        var snappy = Conductor.Step(Spec(bpm: Lo), userArousal: 0.0, elapsedSeconds: 800, dtSeconds: 30, Lo, Hi, sensitivity: 2.0);
+        Assert.True(snappy.Bpm > calm.Bpm); // under-aroused → both lift; higher sensitivity lifts more
+    }
+
+    [Fact]
     public void Step_Preserves_Tonal_Identity()
     {
         var cur = Spec(bpm: 78);

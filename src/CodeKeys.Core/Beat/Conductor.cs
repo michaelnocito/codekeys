@@ -76,8 +76,12 @@ public static class Conductor
     /// identity (preset/scale/root/loopBars) so the renderer never rebakes; only tempo, density and
     /// active layers move — and tempo/density only by a small rate-limited step.
     /// </summary>
+    /// <param name="sensitivity">
+    /// User-controllable reactivity multiplier (1 = baseline). Scales how fast the beat moves toward
+    /// its target each loop — higher = snappier / less gradual, lower = calmer / slower.
+    /// </param>
     public static BeatSpec Step(BeatSpec current, double userArousal, double elapsedSeconds,
-                                double dtSeconds, int bpmLo, int bpmHi)
+                                double dtSeconds, int bpmLo, int bpmHi, double sensitivity = 1.0)
     {
         // Read current musical arousal back from where the tempo sits in the preset's range.
         double m = bpmHi > bpmLo ? Clamp((current.Bpm - bpmLo) / (double)(bpmHi - bpmLo), 0, 1) : 0.5;
@@ -87,7 +91,7 @@ public static class Conductor
         double responsiveness = Clamp(elapsedSeconds / ResponsivenessFullAt, 0, 1);
 
         double target   = MusicalTarget(userArousal);
-        double maxDelta = SlewPerSec * Math.Max(dtSeconds, 0);
+        double maxDelta = SlewPerSec * Math.Max(dtSeconds, 0) * Math.Max(0, sensitivity);
         double move     = Clamp(target - m, -maxDelta, maxDelta) * responsiveness;
         double next     = Clamp(m + move, ArousalMin, ArousalMax);
 

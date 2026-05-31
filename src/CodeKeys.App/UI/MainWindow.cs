@@ -124,7 +124,7 @@ public sealed class MainWindow : Form
     private void BuildUi()
     {
         Text = "CodeKeys";
-        ClientSize = new Size(440, 268);
+        ClientSize = new Size(440, 318);
         StartPosition = FormStartPosition.CenterScreen;
         Font = new Font("Segoe UI", 9f);
         MaximizeBox = false;
@@ -171,15 +171,29 @@ public sealed class MainWindow : Form
         _moodPicker.SelectedIndexChanged += OnMoodChanged;
 
         // Dev/demo aid: compress the ~12-min beat build-up into seconds so it's auditionable.
-        var demoToggle = new CheckBox { Text = "⚡  Demo build-up (fast arc)", Checked = false, AutoSize = true, Left = 16, Top = 156 };
+        var demoToggle = new CheckBox { Text = "⚡  Demo build-up (fast arc)", Checked = false, AutoSize = true, Left = 16, Top = 150 };
         demoToggle.CheckedChanged += (_, _) => _beat.TimeScale = demoToggle.Checked ? 20.0 : 1.0;
+
+        // Reactivity: how fast the beat follows your typing (maps to Conductor sensitivity).
+        var reactLabel = new Label { Text = "Reactivity — how fast the beat follows your typing", AutoSize = true, Left = 16, Top = 182 };
+        var reactSlider = new TrackBar
+        {
+            Minimum = 0,
+            Maximum = 100,
+            Value = 50,            // 50 → 1.25× (the +25% default); left = calmer, right = snappier
+            TickFrequency = 25,
+            Width = 408,
+            Left = 14,
+            Top = 202
+        };
+        reactSlider.ValueChanged += (_, _) => _beat.Sensitivity = 0.5 + reactSlider.Value / 100.0 * 1.5;
 
         var volHint = new Label
         {
             Text = "🔊  Volume follows Windows — adjust it from the taskbar volume / mixer.",
             AutoSize = false,
             Left = 16,
-            Top = 190,
+            Top = 256,
             Width = 408,
             Height = 34,
             ForeColor = SystemColors.GrayText
@@ -215,6 +229,8 @@ public sealed class MainWindow : Form
         Controls.Add(moodLabel);
         Controls.Add(_moodPicker);
         Controls.Add(demoToggle);
+        Controls.Add(reactLabel);
+        Controls.Add(reactSlider);
         Controls.Add(volHint);
         Controls.Add(_status);
         Controls.Add(heading);

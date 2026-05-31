@@ -131,10 +131,19 @@ Mike wanted the backing beat to stop looping dead. `BeatPattern.Build` now takes
 - every other loop adds a soft pickup fill (kick on the last "and" + a ghost tick).
 Busyness scales with `Density` (so arousal still modulates it). 3 new tests.
 
+### Reactivity / sensitivity (2026-05-31)
+Mike wanted it less gradual (+25%) and a user slider. Added a **`sensitivity`**
+multiplier to `Conductor.Step` (scales `maxDelta`, i.e. how fast it moves toward
+target each loop; 1 = baseline). `BeatSequencer.Sensitivity` property, default
+**1.25** (the +25%). MainWindow **Reactivity slider** (0–100 → 0.5×–2.0×, default
+mid = 1.25×) sets it live. Responsiveness fade-in + deadband still apply on top.
+1 new test. (Note: "⚡ Demo build-up" = compresses the arc clock 20× for auditioning;
+does NOT change reaction speed — that's what the Reactivity slider is for.)
+
 ### NEXT (after Mike's ear test)
-- **Re-tune by ear** the above knobs (all consts in `Conductor.cs` / easy to find;
-  `_keysLevel`/`_bedLevel` in `AudioEngine.cs`). Want more/less back-beat variance?
-  Knobs: off-beat prob `Density*0.30`, fill cadence `cycle % 2`, in `BeatPattern`.
+- **Re-tune by ear** the consts in `Conductor.cs`; `_keysLevel`/`_bedLevel` in
+  `AudioEngine.cs`. Back-beat variance knobs: off-beat prob `Density*0.30`, fill
+  cadence `cycle % 2` in `BeatPattern`. Reactivity now also live via the slider.
   Does it now feel like background that holds the pulse and only guides when sure?
 - Possible deeper **voice enrichment** from the library (soft Rhodes/bells/richer
   pad) — held back because Mike likes the base tone; pick by ear next.
