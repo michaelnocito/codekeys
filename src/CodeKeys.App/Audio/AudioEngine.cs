@@ -43,7 +43,8 @@ public sealed class AudioEngine : IDisposable, IVoicePlayer
     private float _masterVolume = 1.0f;
     // Keystroke layer = the foreground feedback the user triggers. Research: too-loud incidental
     // sound raises cognitive load/fatigue, so keep it moderate — clearly above the bed, not blaring.
-    private float _keysLevel = 0.55f;
+    // 0.41 is the prior 0.55 lowered by 25% per Mike's testing baseline.
+    private float _keysLevel = 0.41f;
     private float _bedLevel = 0.22f; // background bed sits ~8 dB under the keystroke layer (still well back)
     private bool _keysEnabled = true;
     private bool _bedEnabled = false;

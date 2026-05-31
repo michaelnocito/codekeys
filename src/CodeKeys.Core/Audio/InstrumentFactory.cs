@@ -132,15 +132,17 @@ public static class InstrumentFactory
         var s = new float[count];
 
         // Inharmonic ratios + per-partial amplitudes + decay rates (higher partials fade faster).
-        // Decay rates are deliberately gentle — real Tibetan bowls sustain for 8-30 seconds, not the
-        // 2-3 seconds a struck piano-like envelope gives. With the 0.20 outer multiplier (vs 0.6
-        // before) the fundamental is still at ~5% at 15 s, so the buffer carries a long, slowly
-        // dissolving ring instead of a quick puff.
+        // Decay rates are deliberately gentle so the bowl sustains 25-30 s before fading to silence.
+        // Upper-partial amplitudes are halved vs the classic strike (and the shimmer pair is
+        // weighted toward the primary) — that cuts the metallic wash so the bowl reads as a long
+        // held tone rather than a reverberant cloud.
         double[] ratios = { 1.00, 2.76, 5.40, 8.93 };
-        double[] amps   = { 1.00, 0.55, 0.28, 0.14 };
+        double[] amps   = { 1.00, 0.27, 0.14, 0.07 };
         double[] decays = { 1.0, 1.5, 2.3, 3.2 };
-        const double decayMultiplier = 0.20;
-        const double detuneHz = 0.6;      // small detune between paired partials -> shimmer
+        const double decayMultiplier = 0.10;  // fundamental still ~5% at 30 s
+        const double detuneHz = 0.3;          // gentler beat rate between paired partials
+        const double primaryWeight = 0.70;    // primary partial dominates; detuned shimmer is subtle
+        const double shimmerWeight = 0.30;
 
         // Smoothstep fade-in (3p²-2p³) over the attack window — softer than a linear ramp, so
         // the bowl swells in with no perceptible attack onset.
@@ -163,15 +165,16 @@ public static class InstrumentFactory
                 double envK = Math.Exp(-t * decays[k] * decayMultiplier);
                 double primary = Math.Sin(2.0 * Math.PI * f * t);
                 double shimmer = Math.Sin(2.0 * Math.PI * (f + detuneHz) * t);
-                v += amps[k] * envK * 0.5 * (primary + shimmer);
+                v += amps[k] * envK * (primaryWeight * primary + shimmerWeight * shimmer);
             }
             s[i] = (float)(v * att * gain);
         }
 
         var buf = new SampleBuffer(s, sampleRate);
         buf.NormalizeInPlace(0.85f);
-        // Longer fade-out tail (50ms vs 12ms) so the bowl decays into silence without a final clip.
-        SynthVoiceFactory.FadeOutTail(s, sampleRate, 0.050);
+        // Long fade-out tail (200ms) so the dying ring dissolves softly into silence — a "nice
+        // long exit" with no buffer-end clip.
+        SynthVoiceFactory.FadeOutTail(s, sampleRate, 0.200);
         return buf;
     }
 
