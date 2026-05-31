@@ -116,15 +116,16 @@ public static class InstrumentFactory
     }
 
     /// <summary>
-    /// Tibetan singing bowl: a hammered metal bowl. Built from inharmonic partials with the
-    /// classic ratios (1, 2.76, 5.4, 8.93) — bell-like, not a clean harmonic series — under a
-    /// soft attack and a long resonant decay. Each partial is paired with a slightly detuned
-    /// copy, producing the characteristic shimmering "warble" you hear from a real bowl.
-    /// <para><paramref name="attack"/> is the fade-in time (s). A longer attack reads as "bowed"
-    /// rather than "struck" — the bowl swells in instead of crashing in.</para>
+    /// Tibetan singing bowl: a hammered metal bowl. Inharmonic partials with the classic ratios
+    /// (1, 2.76, 5.4, 8.93) shaped by an ADSR-style envelope: smoothstep attack (ascend), an
+    /// optional sustain plateau (held tone in the middle), and a long slow release (descend).
+    /// <para><paramref name="attack"/> = ascend time, <paramref name="sustain"/> = plateau hold,
+    /// <paramref name="durationSeconds"/> sets the buffer size and the release fills the remainder
+    /// (so attack + sustain + release == duration).</para>
     /// </summary>
     public static SampleBuffer CreateSingingBowl(double freq, int sampleRate,
-        double durationSeconds = 1.4, float gain = 0.85f, double attack = 0.06)
+        double durationSeconds = 1.4, float gain = 0.85f, double attack = 0.06,
+        double sustain = 0.0)
     {
         if (freq <= 0) throw new ArgumentOutOfRangeException(nameof(freq));
 
@@ -132,31 +133,40 @@ public static class InstrumentFactory
         var s = new float[count];
 
         // Inharmonic ratios + per-partial amplitudes + decay rates (higher partials fade faster).
-        // Decay rates are deliberately gentle so the bowl sustains 25-30 s before fading to silence.
-        // Upper-partial amplitudes are halved vs the classic strike (and the shimmer pair is
-        // weighted toward the primary) — that cuts the metallic wash so the bowl reads as a long
-        // held tone rather than a reverberant cloud.
+        // Very gentle per-partial decay so the upper-partial colour gradually fades during the
+        // long sustain — bowl character without metallic wash. The detuned-partial shimmer that
+        // produces the "warble" is now nearly off (0.08 Hz beat, 10 % weight) so the bowl reads
+        // as a clean held tone rather than a wavering one.
         double[] ratios = { 1.00, 2.76, 5.40, 8.93 };
         double[] amps   = { 1.00, 0.27, 0.14, 0.07 };
         double[] decays = { 1.0, 1.5, 2.3, 3.2 };
-        const double decayMultiplier = 0.10;  // fundamental still ~5% at 30 s
-        const double detuneHz = 0.3;          // gentler beat rate between paired partials
-        const double primaryWeight = 0.70;    // primary partial dominates; detuned shimmer is subtle
-        const double shimmerWeight = 0.30;
+        const double decayMultiplier = 0.04;   // very slow per-partial decay (fundamental ~30 % at 30 s)
+        const double detuneHz = 0.08;          // near-zero beat → almost no warble
+        const double primaryWeight = 0.90;     // primary partial overwhelmingly dominates
+        const double shimmerWeight = 0.10;     // tiny detuned colouring, no perceptible wash
 
-        // Smoothstep fade-in (3p²-2p³) over the attack window — softer than a linear ramp, so
-        // the bowl swells in with no perceptible attack onset.
-        double SmoothAttack(double t)
+        // Release fills whatever time the buffer has after attack + sustain. Rate is chosen so the
+        // envelope ends at ~5 % (then FadeOutTail finishes the job).
+        double release = Math.Max(0.01, durationSeconds - attack - sustain);
+        double releaseRate = 3.0 / release;
+
+        double Envelope(double t)
         {
-            if (t >= attack) return 1.0;
-            double p = t / attack;
-            return p * p * (3 - 2 * p);
+            if (t < attack)
+            {
+                double p = t / attack;
+                return p * p * (3 - 2 * p); // ascend (smoothstep)
+            }
+            double afterAttack = t - attack;
+            if (afterAttack < sustain) return 1.0; // held tone plateau
+            double r = afterAttack - sustain;
+            return Math.Exp(-r * releaseRate);     // descend (exponential)
         }
 
         for (int i = 0; i < count; i++)
         {
             double t = i / (double)sampleRate;
-            double att = SmoothAttack(t);
+            double env = Envelope(t);
             double v = 0;
             for (int k = 0; k < ratios.Length; k++)
             {
@@ -167,14 +177,13 @@ public static class InstrumentFactory
                 double shimmer = Math.Sin(2.0 * Math.PI * (f + detuneHz) * t);
                 v += amps[k] * envK * (primaryWeight * primary + shimmerWeight * shimmer);
             }
-            s[i] = (float)(v * att * gain);
+            s[i] = (float)(env * v * gain);
         }
 
         var buf = new SampleBuffer(s, sampleRate);
         buf.NormalizeInPlace(0.85f);
-        // Long fade-out tail (200ms) so the dying ring dissolves softly into silence — a "nice
-        // long exit" with no buffer-end clip.
-        SynthVoiceFactory.FadeOutTail(s, sampleRate, 0.200);
+        // Long fade-out tail (300 ms) so the dying ring dissolves softly into silence.
+        SynthVoiceFactory.FadeOutTail(s, sampleRate, 0.300);
         return buf;
     }
 

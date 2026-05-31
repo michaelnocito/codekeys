@@ -169,15 +169,16 @@ public static class BeatPattern
                 primaryMidi = scale.DegreeToMidi(root, deg);
             }
 
-            // Strike 1 — bar 0 downbeat (every loop).
-            hits.Add(new BeatHit(0, BeatLayer.Bowl, primaryMidi, 0.70, 0));
+            // Strike 1 — bar 0 downbeat (every loop). Hit gain dropped so bowls sit BEHIND the bass
+            // (bass is the focus; bowls are the consistent background presence).
+            hits.Add(new BeatHit(0, BeatLayer.Bowl, primaryMidi, 0.30, 0));
 
-            // Strike 2 — chakras only, at the loop's midpoint. Doubles the density and lets the
-            // strikes overlap into a continuous shimmer the bass can't bury.
+            // Strike 2 — chakras only, at the loop's midpoint. Keeps the chakra bowl consistently
+            // present (two long-sustaining strikes per loop overlap into a steady background drone).
             if (chakraFreq.HasValue && spec.LoopBars >= 2)
             {
                 int midStep = (spec.LoopBars / 2) * 16;
-                hits.Add(new BeatHit(midStep, BeatLayer.Bowl, primaryMidi, 0.60, 0));
+                hits.Add(new BeatHit(midStep, BeatLayer.Bowl, primaryMidi, 0.25, 0));
             }
         }
 
