@@ -45,12 +45,15 @@ One task at a time. Audio engine first, global hook later, UI last.
 
 ---
 
-## v2 — Adaptive / biofeedback music engine (vision, captured 2026-05-30)
+## v2 — Adaptive music engine (captured 2026-05-30)
 
-Mike's direction: the app should **generate music for you** from (1) your
-keystrokes (within the existing privacy guidelines) and (2) optional biofeedback
-(heart rate). Goal: gently keep the user in a flow / "wu wei" state — efficient,
-low-tension, sustained positive progress.
+Mike's direction: the app should **generate music for you** from your keystrokes
+(within the existing privacy guidelines). Goal: gently keep the user in a flow /
+"wu wei" state — efficient, low-tension, sustained positive progress.
+
+**Scope decisions (2026-05-30):** ❌ Apple Watch, ❌ heart-rate / biofeedback of
+any kind ("not important to our cause"), and ❌ cross-platform are all CUT.
+CodeKeys is **Windows-only**, driven **purely by keystrokes**.
 
 ### Research grounding (so we don't ship pseudoscience)
 - **Iso principle** (music therapy): don't jump straight to the target mood —
@@ -83,24 +86,9 @@ backspaces, punctuation — privacy-safe, no characters).
 - **Fix carried over**: `BeatSequencer.UpdateGroove` resets `_cycle=0` every 3s —
   must preserve session time or the arc/ramp keeps restarting.
 
-### Heart-rate biofeedback
-- **v2a — BLE heart-rate strap (RECOMMENDED FIRST):** standard BLE GATT Heart
-  Rate Service; Windows reads it directly (no Mac, no Apple dev account). Proves
-  the whole biometric→beat loop. "Play my heartbeat" = sonify each beat as a kick
-  / seed tempo from resting HR. Fun mode.
-- **v2b — Apple Watch:** NO web/backend API and HealthKit is not a live stream.
-  Near-real-time HR requires a **native watchOS app running a workout session +
-  streaming HealthKit query**, relaying over LAN to the Windows app (the OBS
-  "Health Data Server" pattern). Needs a Mac + Xcode + Apple Developer account.
-  Bigger lift → after v2a.
-
-### Cross-platform reality
-- The **core (system-wide keystroke capture)** cannot run on iOS — iOS sandboxes
-  apps; no global key hook. Home stays **Windows** (macOS possible via CGEventTap;
-  not iOS). An iOS/watchOS app's only role here = the **HR sensor bridge** (v2b).
-
-### Smaller captured items
-- **Volume follows the OS** (don't make users set two sliders). Windows already
-  scales per-app output by the system master + per-app fader, so: drop the app's
-  redundant internal volume slider, lean on the OS mixer, keep mute/panic hotkey.
-  (Optional: mirror the endpoint volume in the UI via NAudio `AudioEndpointVolume`.)
+### Smaller items
+- **Volume follows the OS** ✅ DONE (2026-05-30). WASAPI shared mode already makes
+  CodeKeys its own entry in the Windows volume mixer (scaled by system master +
+  per-app fader), so the in-app slider was redundant — removed it; the window now
+  just shows a "Volume follows Windows" hint. Fixed internal headroom = 0.85.
+  Optional future: a global mute/panic hotkey (tray step 6).

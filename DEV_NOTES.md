@@ -92,8 +92,12 @@ physiological claims). Roadmap "v2 adaptive engine" section has the full spec.
   `Development` field on BeatSpec; deferred to keep this change bounded.
 - Resolution phase on idle (wind down when the user stops), not just by timer.
 - Still-random **Marimba** noodle → make it support the motif.
-- **Volume follows OS** quick win (drop in-app slider; see roadmap).
-- **Heart-rate biofeedback**: BLE strap first, Apple Watch later (see roadmap).
+- **Volume follows OS** ✅ DONE — removed the in-app slider; WASAPI shared mode
+  means Windows' own volume mixer controls CodeKeys. Window shows a hint instead.
+
+**Scope cuts (2026-05-30, per Mike):** ❌ Apple Watch, ❌ heart-rate / biofeedback,
+❌ cross-platform — all dropped. Windows-only, keystroke-driven. Standing order:
+follow my own recommendations unless Mike has overridden them.
 - **Module 1 (live capture → Signals) DONE.** `Core/Input/KeyClassifier` (vk→KeyKind)
   + `Core/Beat/SignalsCollector` (rolling 12s window → Signals; records only timing
   + category + an upper/lower bit, **never the characters** — `Signals.Text` always

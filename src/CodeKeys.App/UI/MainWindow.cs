@@ -29,7 +29,6 @@ public sealed class MainWindow : Form
 
     private CheckBox _keysToggle = null!;
     private CheckBox _bedToggle = null!;
-    private TrackBar _volume = null!;
     private Label _status = null!;
     private ComboBox _presetPicker = null!;
     private ComboBox _moodPicker = null!;
@@ -61,7 +60,9 @@ public sealed class MainWindow : Form
         BuildUi();
 
         _engine.SetBedProvider(_beat);
-        _engine.MasterVolume = 0.8f;
+        // Fixed internal headroom. The user controls loudness through Windows (WASAPI shared mode
+        // means CodeKeys is its own entry in the system volume mixer) — no separate in-app slider.
+        _engine.MasterVolume = 0.85f;
         _engine.Start();
 
         _hook.KeyDown += OnHookKeyDown;
@@ -123,7 +124,7 @@ public sealed class MainWindow : Form
     private void BuildUi()
     {
         Text = "CodeKeys";
-        ClientSize = new Size(440, 290);
+        ClientSize = new Size(440, 248);
         StartPosition = FormStartPosition.CenterScreen;
         Font = new Font("Segoe UI", 9f);
         MaximizeBox = false;
@@ -169,18 +170,16 @@ public sealed class MainWindow : Form
         _moodPicker.SelectedItem = BeatPreset.Focused;
         _moodPicker.SelectedIndexChanged += OnMoodChanged;
 
-        var volLabel = new Label { Text = "Master volume", AutoSize = true, Left = 16, Top = 168 };
-        _volume = new TrackBar
+        var volHint = new Label
         {
-            Minimum = 0,
-            Maximum = 100,
-            Value = 80,
-            TickFrequency = 25,
-            Width = 400,
-            Left = 14,
-            Top = 188
+            Text = "🔊  Volume follows Windows — adjust it from the taskbar volume / mixer.",
+            AutoSize = false,
+            Left = 16,
+            Top = 170,
+            Width = 408,
+            Height = 34,
+            ForeColor = SystemColors.GrayText
         };
-        _volume.ValueChanged += (_, _) => _engine.MasterVolume = _volume.Value / 100f;
 
         _status = new Label
         {
@@ -211,8 +210,7 @@ public sealed class MainWindow : Form
         Controls.Add(_bedToggle);
         Controls.Add(moodLabel);
         Controls.Add(_moodPicker);
-        Controls.Add(volLabel);
-        Controls.Add(_volume);
+        Controls.Add(volHint);
         Controls.Add(_status);
         Controls.Add(heading);
         Controls.Add(stamp);
