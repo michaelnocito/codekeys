@@ -149,27 +149,51 @@ public class ConductorTests
     }
 
     [Fact]
-    public void Step_Establish_Is_Bass_And_Drums_No_Splash_No_Chord_No_High_Tones()
+    public void Step_Start_Is_Just_The_Lone_Tapper_No_Other_Voices()
     {
-        var next = Conductor.Step(Spec(), 0.6, elapsedSeconds: 10, dtSeconds: 5, Lo, Hi);
-        Assert.Contains(BeatLayer.Pulse, next.Layers);        // drums
-        Assert.Contains(BeatLayer.Bass, next.Layers);         // steady low body, always on
-        Assert.DoesNotContain(BeatLayer.Splash, next.Layers); // splashes come later
-        Assert.DoesNotContain(BeatLayer.Pad, next.Layers);    // no chord
+        // At t=0 only Pulse — the "person 1 tapping". Bass/Ghost/Splash all wait their turn.
+        var next = Conductor.Step(Spec(), 0.6, elapsedSeconds: 0, dtSeconds: 5, Lo, Hi);
+        Assert.Contains(BeatLayer.Pulse, next.Layers);
+        Assert.DoesNotContain(BeatLayer.Ghost, next.Layers);
+        Assert.DoesNotContain(BeatLayer.Bass, next.Layers);
+        Assert.DoesNotContain(BeatLayer.Splash, next.Layers);
+        Assert.DoesNotContain(BeatLayer.Pad, next.Layers); // never the chord
         AssertNoHighTones(next.Layers);
+        Assert.True(next.Density < 0.10); // very sparse to start
     }
 
     [Fact]
-    public void Step_From_Statement_Adds_Splash_Keeps_Bass_No_Chord_No_High_Tones()
+    public void Step_Voices_Enter_One_At_A_Time_Across_The_Build()
     {
-        foreach (var t in new[] { 200.0, 700.0, 2000.0 }) // statement, development, flow
+        // The additive-minimalism contract: Ghost > Bass > Splash, each waiting for the next
+        // envelope threshold. By the end of the build, everything we keep is present.
+        var t0   = Conductor.Step(Spec(), 0.6, 0,    5, Lo, Hi);
+        var t300 = Conductor.Step(Spec(), 0.6, 300,  5, Lo, Hi); // envelope 0.25
+        var t450 = Conductor.Step(Spec(), 0.6, 450,  5, Lo, Hi); // envelope 0.5625
+        var tEnd = Conductor.Step(Spec(), 0.6, Conductor.BuildupSeconds, 5, Lo, Hi);
+
+        Assert.DoesNotContain(BeatLayer.Ghost, t0.Layers);
+        Assert.Contains(BeatLayer.Ghost,  t300.Layers); // ~5 min: soft taps have joined
+        Assert.DoesNotContain(BeatLayer.Bass, t300.Layers); // bass hasn't yet
+        Assert.Contains(BeatLayer.Bass,   t450.Layers); // ~7.5 min: deep bass has joined
+        Assert.Contains(BeatLayer.Splash, tEnd.Layers); // by full build, splashes too
+
+        foreach (var spec in new[] { t0, t300, t450, tEnd })
         {
-            var next = Conductor.Step(Spec(), 0.6, elapsedSeconds: t, dtSeconds: 5, Lo, Hi);
-            Assert.Contains(BeatLayer.Bass, next.Layers);
-            Assert.Contains(BeatLayer.Splash, next.Layers);
-            Assert.DoesNotContain(BeatLayer.Pad, next.Layers);
-            AssertNoHighTones(next.Layers);
+            Assert.Contains(BeatLayer.Pulse, spec.Layers); // tapper is there throughout
+            Assert.DoesNotContain(BeatLayer.Pad, spec.Layers);
+            AssertNoHighTones(spec.Layers);
         }
+    }
+
+    [Fact]
+    public void Step_Density_Climbs_With_The_Build()
+    {
+        var t0   = Conductor.Step(Spec(), 0.5, 0,                          5, Lo, Hi);
+        var t300 = Conductor.Step(Spec(), 0.5, 300,                        5, Lo, Hi);
+        var tEnd = Conductor.Step(Spec(), 0.5, Conductor.BuildupSeconds,   5, Lo, Hi);
+        Assert.True(t0.Density < t300.Density);
+        Assert.True(t300.Density < tEnd.Density);
     }
 
     [Theory]
@@ -196,34 +220,35 @@ public class ConductorTests
         Assert.Equal(a.Layers, b.Layers);
     }
 
-    // ---- buildup mode ----
+    // ---- additive build envelope ----
 
     [Fact]
-    public void Buildup_Envelope_Spans_Zero_To_One_And_Starts_Barely_There()
+    public void Build_Envelope_Spans_Zero_To_One_And_Starts_Almost_Imperceptible()
     {
         Assert.Equal(0.0, Conductor.BuildupEnvelope(0), 3);
         Assert.Equal(1.0, Conductor.BuildupEnvelope(Conductor.BuildupSeconds), 3);
         Assert.Equal(1.0, Conductor.BuildupEnvelope(Conductor.BuildupSeconds * 5), 3); // clamps
-        Assert.True(Conductor.BuildupEnvelope(60) < 0.05);                              // near-silent first minute
+        Assert.True(Conductor.BuildupEnvelope(60) < 0.02);                              // first minute: ~1%
         Assert.True(Conductor.BuildupEnvelope(150) < Conductor.BuildupEnvelope(300));   // monotonic rise
     }
 
     [Fact]
-    public void Buildup_Starts_Sparse_And_Empty_Then_Fills_To_Full()
+    public void Build_Envelope_Is_Ease_In_Slow_At_Start()
     {
-        var start = Conductor.BuildupSpec(Spec(), 0, Lo, Hi);
-        var end   = Conductor.BuildupSpec(Spec(), Conductor.BuildupSeconds, Lo, Hi);
+        // ease-in (p²): at the midpoint we should still be only ~25% through (vs 50% on smoothstep).
+        // This is what makes the first half "almost not noticeable" — the slow organic add-on.
+        double half = Conductor.BuildupEnvelope(Conductor.BuildupSeconds / 2);
+        Assert.True(half < 0.30, $"half-way envelope {half} should still be sparse");
+    }
 
-        Assert.True(start.Density < 0.10);          // huge note spacing at the very start
-        Assert.True(end.Density > start.Density);   // fills in
-        // Layers assemble: just the base pulse at the start; bass + splashes by the end, no chord/high tones.
-        Assert.DoesNotContain(BeatLayer.Bass, start.Layers);
-        Assert.DoesNotContain(BeatLayer.Splash, start.Layers);
-        Assert.Contains(BeatLayer.Pulse, start.Layers);
-        Assert.Contains(BeatLayer.Bass, end.Layers);
-        Assert.Contains(BeatLayer.Splash, end.Layers);
-        Assert.DoesNotContain(BeatLayer.Pad, end.Layers);
-        AssertNoHighTones(end.Layers);
+    [Fact]
+    public void Step_Arousal_Response_Is_Gated_By_The_Build()
+    {
+        // During the build (t small), even strong arousal should barely move the tempo. After the
+        // build, the same arousal moves it as far as the rate-limit allows.
+        var inBuild = Conductor.Step(Spec(bpm: Lo), userArousal: 0.0, elapsedSeconds: 30, dtSeconds: 30, Lo, Hi);
+        var built   = Conductor.Step(Spec(bpm: Lo), userArousal: 0.0, elapsedSeconds: Conductor.BuildupSeconds, dtSeconds: 30, Lo, Hi);
+        Assert.True(built.Bpm - Lo > inBuild.Bpm - Lo);
     }
 
     [Fact]

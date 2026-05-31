@@ -1,14 +1,16 @@
 namespace CodeKeys.Core.Beat;
 
 /// <summary>
-/// The adaptive "conductor" (pure, deterministic): it keeps the typist in a flow band by gently
-/// steering the beat instead of jumping it. Grounded in two ideas from the research:
-///  • the ISO PRINCIPLE — meet the user near their current arousal, then *lead* gradually;
-///  • the YERKES-DODSON inverted-U — performance peaks at an *optimal* (not minimal) arousal, so
-///    the target is a flow band and the response is COUNTER-ACTIVE: speeding up / erratic typing
-///    eases the beat down to settle the user; slowing / idle typing lifts it to re-activate them.
-/// Every change is rate-limited, so it's a slow unobtrusive ramp (~a minute to cross the range),
-/// never an abrupt switch. A session ARC also builds the bed in over the first ~12 minutes.
+/// The adaptive "conductor" (pure, deterministic). Two ideas in one engine:
+///
+///  1. **ADDITIVE BUILD** (Reich/drum-circle "people slowly join the beat"): every session starts
+///     almost silent and voices enter ONE AT A TIME over <see cref="BuildupSeconds"/> (~10 min),
+///     driven by an ease-in envelope so the first minutes are barely noticeable. This is the
+///     default experience — there is no separate "buildup mode" anymore.
+///  2. **AROUSAL THERMOSTAT** (iso principle + Yerkes-Dodson): once the build has progressed, the
+///     beat gently counter-steers tempo toward a flow band — over-aroused → ease down, under →
+///     activate. The arousal response itself is **gated by the build envelope**, so during the
+///     first minutes nothing reacts; it fades in as the texture does.
 ///
 /// HONESTY: this regulates *psychological* arousal/attention. It does NOT entrain heart rate —
 /// the evidence for tempo→heart-rate sync is weak — so we make no physiological claims.
@@ -29,7 +31,9 @@ public static class Conductor
     public const double SlewPerSec = 0.004;  // max arousal change per second (very gentle ramp)
     public const double ResponsivenessFullAt = 300; // seconds: adaptation fades IN slowly from the base beat
 
-    // "Buildup" mode: a slow, near-silent → full crescendo over this many seconds (a separate setting).
+    // The slow additive build over which voices enter one at a time ("people in public adding to
+    // a beat" — Steve Reich's Drumming / West African drum-circle layering). DEFAULT behaviour, not
+    // an opt-in: every session starts almost silent and the texture assembles over these seconds.
     public const double BuildupSeconds = 600; // 10 minutes
 
     // session-arc phase boundaries, in seconds
@@ -75,87 +79,66 @@ public static class Conductor
     }
 
     /// <summary>
-    /// Advance the beat one loop toward the flow target and along the session arc. Preserves tonal
-    /// identity (preset/scale/root/loopBars) so the renderer never rebakes; only tempo, density and
-    /// active layers move — and tempo/density only by a small rate-limited step.
-    /// </summary>
-    /// <param name="sensitivity">
-    /// User-controllable reactivity multiplier (1 = baseline). Scales how fast the beat moves toward
-    /// its target each loop — higher = snappier / less gradual, lower = calmer / slower.
-    /// </param>
-    public static BeatSpec Step(BeatSpec current, double userArousal, double elapsedSeconds,
-                                double dtSeconds, int bpmLo, int bpmHi, double sensitivity = 1.0)
-    {
-        // Read current musical arousal back from where the tempo sits in the preset's range.
-        double m = bpmHi > bpmLo ? Clamp((current.Bpm - bpmLo) / (double)(bpmHi - bpmLo), 0, 1) : 0.5;
-
-        // Responsiveness fades in over the first few minutes: early on the beat just holds the base
-        // pulse, then it gradually starts responding to typing — a slow, perceptible transition.
-        double responsiveness = Clamp(elapsedSeconds / ResponsivenessFullAt, 0, 1);
-
-        double target   = MusicalTarget(userArousal);
-        double maxDelta = SlewPerSec * Math.Max(dtSeconds, 0) * Math.Max(0, sensitivity);
-        double move     = Clamp(target - m, -maxDelta, maxDelta) * responsiveness;
-        double next     = Clamp(m + move, ArousalMin, ArousalMax);
-
-        int bpm = (int)Math.Round(bpmLo + (bpmHi - bpmLo) * next, MidpointRounding.AwayFromZero);
-
-        var phase = PhaseAt(elapsedSeconds);
-        double arcMult = phase switch
-        {
-            Phase.Establish => 0.55,
-            Phase.Statement => 0.75,
-            _               => 0.9, // Development + Flow — kept under 1 to leave space
-        };
-        double density = Clamp((0.28 + 0.42 * next) * arcMult, 0.12, 0.85);
-
-        // Low blanket: deep Bass + drums (Pulse/Ghost) are the steady foundation; rare Splashes add
-        // variety from the Statement phase on. No Pad chord and no high tones (filtered out).
-        var layers = current.Layers
-            .Where(l => l is not (BeatLayer.Pad or BeatLayer.Melody or BeatLayer.Marimba or BeatLayer.Chime or BeatLayer.Splash))
-            .ToList();
-        if (!layers.Contains(BeatLayer.Bass)) layers.Add(BeatLayer.Bass); // the steady low body, always
-        if (phase >= Phase.Statement) layers.Add(BeatLayer.Splash);
-
-        return current with { Bpm = bpm, Density = density, Layers = layers.ToArray() };
-    }
-
-    // ---- "Buildup" mode: a long, deliberate crescendo (not the adaptive thermostat) ----
-
-    /// <summary>
-    /// The buildup progress envelope 0..1 over <see cref="BuildupSeconds"/>. Smoothstep, so it's
-    /// barely-there at the very start and eases to full — a slow, song-like rise you mostly *feel*.
+    /// The additive-build envelope 0..1 over <see cref="BuildupSeconds"/>. **Ease-in (p²)** so the
+    /// first minutes are almost imperceptible (at 1 min in, envelope ≈ 0.028; at 5 min in, ≈ 0.25)
+    /// — the slow, organic "people slowly join the beat" rise Mike asked for. Returned as a
+    /// fraction the renderer + Step use to gate volume, note-fill, and voice entry.
     /// </summary>
     public static double BuildupEnvelope(double elapsedSeconds)
     {
         double p = Clamp(elapsedSeconds / BuildupSeconds, 0, 1);
-        return p * p * (3 - 2 * p);
+        return p * p;
     }
 
     /// <summary>
-    /// The beat spec for "buildup" mode at <paramref name="elapsedSeconds"/>: time-driven (ignores
-    /// arousal), assembling the texture over ~10 minutes. Density grows from almost nothing (huge
-    /// note spacing) to a full-but-calm groove, voices enter progressively, and the tempo lifts a
-    /// little — the renderer also rides an output crescendo + a note-fill factor on top of this.
+    /// Advance the beat one loop. Runs both the additive build (voices enter one at a time,
+    /// drives note density) and the arousal thermostat (counter-steers tempo). Preserves tonal
+    /// identity (preset/scale/root/loopBars) so the renderer never rebakes; only tempo, density,
+    /// and active-layer membership move.
     /// </summary>
-    public static BeatSpec BuildupSpec(BeatSpec current, double elapsedSeconds, int bpmLo, int bpmHi)
+    /// <param name="sensitivity">
+    /// User reactivity multiplier (1 = baseline). Scales how fast the beat moves toward target.
+    /// </param>
+    public static BeatSpec Step(BeatSpec current, double userArousal, double elapsedSeconds,
+                                double dtSeconds, int bpmLo, int bpmHi, double sensitivity = 1.0)
     {
-        double e = BuildupEnvelope(elapsedSeconds);
+        double build = BuildupEnvelope(elapsedSeconds);
 
-        // Tempo rises gently across the build — part of the crescendo (resting → a touch above).
-        double m = Clamp(0.35 + 0.30 * e, 0, 1);
-        int bpm = (int)Math.Round(bpmLo + (bpmHi - bpmLo) * m, MidpointRounding.AwayFromZero);
+        // Read current musical arousal back from where the tempo sits in the preset's range.
+        double m = bpmHi > bpmLo ? Clamp((current.Bpm - bpmLo) / (double)(bpmHi - bpmLo), 0, 1) : 0.5;
 
-        // Note density: almost nothing at first → full-but-calm.
-        double density = Clamp(0.04 + 0.66 * e, 0.04, 0.85);
+        // Two gates ride on top of the arousal response so the thermostat barely moves during the
+        // build: a responsiveness ramp + the build envelope itself. Result: the first ~5 min the
+        // beat doesn't really respond to typing — it's just slowly assembling.
+        double responsiveness = Clamp(elapsedSeconds / ResponsivenessFullAt, 0, 1);
 
-        // Voices assemble progressively (Pulse is the base, gated to a sparse heartbeat early via the
-        // renderer's note-fill factor): deep Bass comes in, then rare Splashes. No Pad, no high tones.
+        double target   = MusicalTarget(userArousal);
+        double maxDelta = SlewPerSec * Math.Max(dtSeconds, 0) * Math.Max(0, sensitivity);
+        double move     = Clamp(target - m, -maxDelta, maxDelta) * responsiveness * build;
+        // The aliveness floor also rises with the build — during the build the music IS allowed
+        // to be quieter/slower than ArousalMin (that's the point); the floor reasserts as the
+        // texture assembles, so steady-state still has a minimum liveness.
+        double floor    = ArousalMin * build;
+        double next     = Clamp(m + move, floor, ArousalMax);
+
+        int bpm = (int)Math.Round(bpmLo + (bpmHi - bpmLo) * next, MidpointRounding.AwayFromZero);
+
+        // Density: starts almost nothing (0.04) and rises with the build; only a small contribution
+        // from arousal once the build is well underway. The renderer additionally thins kick + melody
+        // by the same envelope, so even within "low density" the actual hits are still gated.
+        double density = Clamp(0.04 + 0.55 * build + 0.20 * next * build, 0.04, 0.85);
+
+        // Voices enter ONE AT A TIME, Reich/drum-circle style. Pulse is the lone tapper from the
+        // start (but is itself gated to a near-silent heartbeat early via the renderer's note-fill).
+        // Then Ghost taps join, then the deep Bass boom, then rare Splashes — each at a build
+        // threshold rather than all-at-once. No Pad chord, no high tones.
         var layers = current.Layers
-            .Where(l => l is not (BeatLayer.Pad or BeatLayer.Melody or BeatLayer.Marimba or BeatLayer.Chime or BeatLayer.Bass or BeatLayer.Splash))
+            .Where(l => l is not (BeatLayer.Pad or BeatLayer.Melody or BeatLayer.Marimba or BeatLayer.Chime or BeatLayer.Bass or BeatLayer.Splash or BeatLayer.Ghost))
             .ToList();
-        if (e > 0.10) layers.Add(BeatLayer.Bass);
-        if (e > 0.50) layers.Add(BeatLayer.Splash);
+        if (!layers.Contains(BeatLayer.Pulse)) layers.Add(BeatLayer.Pulse); // person 1 — the tapper
+        if (build > 0.20) layers.Add(BeatLayer.Ghost);  // person 2 — soft taps (~ 4.5 min in)
+        if (build > 0.40) layers.Add(BeatLayer.Bass);   // person 3 — the low boom    (~ 6.3 min in)
+        if (build > 0.70) layers.Add(BeatLayer.Splash); // person 4 — rare colour     (~ 8.4 min in)
 
         return current with { Bpm = bpm, Density = density, Layers = layers.ToArray() };
     }

@@ -16,7 +16,7 @@ public static class SignalsToBeat
     private static readonly IReadOnlyDictionary<BeatPreset, PresetRange> Presets =
         new Dictionary<BeatPreset, PresetRange>
         {
-            [BeatPreset.Focused] = new(60, 72, BeatScale.Dorian, "D3", new[] { BeatLayer.Pulse, BeatLayer.Bass }),
+            [BeatPreset.Focused] = new(60, 72, BeatScale.Dorian, "D3", new[] { BeatLayer.Pulse }),
             [BeatPreset.Relaxed] = new(60, 70, BeatScale.MajorPentatonic, "C3", new[] { BeatLayer.Pad }),
             [BeatPreset.Burnout] = new(75, 88, BeatScale.Major, "F3", new[] { BeatLayer.Pad, BeatLayer.Pulse }),
             [BeatPreset.Silly]   = new(100, 130, BeatScale.MajorPentatonic, "C4", new[] { BeatLayer.Marimba, BeatLayer.Pulse }),

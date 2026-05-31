@@ -45,11 +45,10 @@ public sealed class BeatSequencer : ISampleProvider
     private double _userArousal = 0.5;  // latest typing arousal (0..1); updated live via Observe
     private long _sessionSamples;       // samples since the session (mood) started → arc clock
     private int _loopCount;             // loop index → seeds the per-loop back-beat variation
-    private double _timeScale = 1.0;    // compresses the arc clock for quick auditioning (1 = real time)
+    private double _timeScale = 1.0;    // compresses the build clock for quick auditioning (1 = real time)
     private double _sensitivity = 1.25; // user reactivity multiplier (1 = baseline; default +25%)
-    private bool _buildup;              // "Buildup" mode: a slow ~10-min near-silent → full crescendo
-    private float _buildupGain = 1.0f;  // output crescendo gain in buildup (1 = normal)
-    private double _noteFill = 1.0;     // note-fill factor passed to BeatPattern (1 = full; <1 = sparse)
+    private float _buildGain = 0.06f;   // additive build's output gain — 0.06 (near-silent) → 1.0
+    private double _noteFill = 0.0;     // note-fill factor passed to BeatPattern — 0 (sparse) → 1 (full)
     private Scheduled[] _schedule = Array.Empty<Scheduled>();
     private long _loopLen = 1;
     private long _playhead;
@@ -63,29 +62,21 @@ public sealed class BeatSequencer : ISampleProvider
     }
 
     /// <summary>
-    /// Swap to a new beat (e.g. a different mood) live. Re-bakes the voice bank, restarts the
-    /// session arc, and normalizes the spec to the arc's opening (sparse "establish" phase) so a
-    /// new mood eases in rather than slamming in at full texture.
+    /// Swap to a new beat live. Re-bakes the voice bank and restarts the additive build from
+    /// silence so the new spec eases in (one tapper, then voices joining) instead of slamming in
+    /// at full texture.
     /// </summary>
     public void SetSpec(BeatSpec spec)
     {
         lock (_gate)
         {
             var (lo, hi) = SignalsToBeat.BpmRange(spec.Preset);
-            if (_buildup)
-            {
-                _spec = Conductor.BuildupSpec(spec, elapsedSeconds: 0, lo, hi);
-                double e0 = Conductor.BuildupEnvelope(0);
-                _buildupGain = (float)(0.05 + 0.95 * e0);
-                _noteFill = e0;
-            }
-            else
-            {
-                // dt = 0 → tempo unchanged; just applies the arc's opening (establish) layers/density.
-                _spec = Conductor.Step(spec, _userArousal, elapsedSeconds: 0, dtSeconds: 0, lo, hi, _sensitivity);
-                _buildupGain = 1.0f;
-                _noteFill = 1.0;
-            }
+            // dt = 0 + elapsedSeconds = 0 → tempo unchanged; just applies the build's opening
+            // (Pulse only, near-silent) so the texture starts from the bottom of the curve.
+            _spec = Conductor.Step(spec, _userArousal, elapsedSeconds: 0, dtSeconds: 0, lo, hi, _sensitivity);
+            double e0 = Conductor.BuildupEnvelope(0);
+            _buildGain = (float)(0.06 + 0.94 * e0);
+            _noteFill = e0;
             _sessionSamples = 0;
             _loopCount = 0;
             BakeBank(_spec);
@@ -110,10 +101,9 @@ public sealed class BeatSequencer : ISampleProvider
     }
 
     /// <summary>
-    /// Compress the session arc for quick auditioning (1 = real time, e.g. 20 = 20× faster build-up).
-    /// Only the arc's build-up clock is scaled — NOT the gentle arousal ramp — so you can hear the
-    /// phases (establish → melody → marimba → full) in seconds while the calm/energize response
-    /// still moves at its natural, unobtrusive rate.
+    /// Compress the build clock for quick auditioning (1 = real time; e.g. 20 = 20× faster).
+    /// Only the build clock is scaled — NOT the moment-to-moment arousal ramp — so you can hear
+    /// the whole ~10-min assembly in seconds.
     /// </summary>
     public double TimeScale
     {
@@ -123,23 +113,13 @@ public sealed class BeatSequencer : ISampleProvider
 
     /// <summary>
     /// How fast the beat reacts to typing (1 = baseline). Higher = snappier / less gradual, lower =
-    /// calmer. Exposed to the user as a slider; the default is 1.25 (+25%).
+    /// calmer. The arousal response is also gated by the build envelope, so early on this knob
+    /// barely matters; it takes effect once the build is well under way.
     /// </summary>
     public double Sensitivity
     {
         get { lock (_gate) return _sensitivity; }
         set { lock (_gate) _sensitivity = Math.Max(0.0, value); }
-    }
-
-    /// <summary>
-    /// "Buildup" mode: bypass the adaptive thermostat and run a slow ~10-minute crescendo instead —
-    /// near-silent and sparse at first, gradually assembling the full beat (volume, density, layers,
-    /// and the melody all build). Toggling it restarts the build from the top.
-    /// </summary>
-    public bool Buildup
-    {
-        get { lock (_gate) return _buildup; }
-        set { lock (_gate) { _buildup = value; _sessionSamples = 0; _loopCount = 0; } }
     }
 
     private void BakeBank(BeatSpec spec)
@@ -248,7 +228,7 @@ public sealed class BeatSequencer : ISampleProvider
                     if (av.Pos >= av.Data.Length) _active.RemoveAt(v);
                     else _active[v] = av;
                 }
-                buffer[offset + i] = sample * _buildupGain; // _buildupGain is 1.0 outside buildup mode
+                buffer[offset + i] = sample * _buildGain; // additive build's output gain (0.06 → 1.0)
 
                 _sessionSamples++;
 
@@ -256,26 +236,16 @@ public sealed class BeatSequencer : ISampleProvider
                 {
                     _playhead = 0;
                     _nextIdx = 0;
-                    // Let the conductor gently steer the next loop toward the flow band + along the arc.
-                    // Session time persists across typing updates (it only resets on a mood change),
-                    // so the ramp and the arc are never restarted mid-session.
-                    double elapsed = _sessionSamples / (double)_rate * _timeScale; // arc clock (demo-scalable)
-                    double dt = _loopLen / (double)_rate;                          // real time → ramp stays gentle
+                    // Advance the build clock; the conductor runs it (voice entry + density + the
+                    // gated arousal response). Build envelope drives output gain + note-fill so the
+                    // first minutes are almost imperceptible by both volume and note count.
+                    double elapsed = _sessionSamples / (double)_rate * _timeScale;
+                    double dt = _loopLen / (double)_rate;
                     var (lo, hi) = SignalsToBeat.BpmRange(_spec.Preset);
-                    if (_buildup)
-                    {
-                        // Time-driven crescendo: assemble the beat over ~10 min (volume + notes + layers).
-                        _spec = Conductor.BuildupSpec(_spec, elapsed, lo, hi);
-                        double e = Conductor.BuildupEnvelope(elapsed);
-                        _buildupGain = (float)(0.05 + 0.95 * e);
-                        _noteFill = e;
-                    }
-                    else
-                    {
-                        _spec = Conductor.Step(_spec, _userArousal, elapsed, dt, lo, hi, _sensitivity);
-                        _buildupGain = 1.0f;
-                        _noteFill = 1.0;
-                    }
+                    _spec = Conductor.Step(_spec, _userArousal, elapsed, dt, lo, hi, _sensitivity);
+                    double e = Conductor.BuildupEnvelope(elapsed);
+                    _buildGain = (float)(0.06 + 0.94 * e);
+                    _noteFill = e;
                     _loopCount++;
                     BuildSchedule(); // reuses the baked bank (scale/root unchanged)
                 }

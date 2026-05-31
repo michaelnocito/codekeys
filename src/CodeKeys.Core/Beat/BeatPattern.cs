@@ -47,10 +47,13 @@ public static class BeatPattern
             {
                 if (s % 4 == 0)
                 {
-                    // Quarter-note anchor. In buildup (intensity<1) the bar's first kick always
-                    // plays, but the other quarters fill in as intensity rises — a sparse heartbeat
-                    // that grows into a steady pulse. At intensity 1.0 this is a no-op (always plays).
-                    if (intensity >= 1.0 || s % 16 == 0 || rng.Next() < intensity)
+                    // Bar-start kicks are gated at low intensity too — that's the "almost not
+                    // noticeable" start (no "dom dom dom dom"). At intensity ≈ 0.01 (first minute),
+                    // bar-start prob ≈ 0.06 → roughly one kick per minute. Climbs smoothly with the
+                    // build. At intensity == 1.0 a short-circuit makes it byte-identical to default.
+                    bool isBarStart = s % 16 == 0;
+                    double prob = isBarStart ? 0.05 + 0.95 * intensity : intensity;
+                    if (intensity >= 1.0 || rng.Next() < prob)
                         hits.Add(new BeatHit(s, BeatLayer.Pulse, root, accentGain, swing));
                 }
                 else if (s % 2 == 0 && rng.Next() < spec.Density * 0.30)

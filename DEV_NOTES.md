@@ -182,6 +182,34 @@ an **instrument change**, not a behavior change:
   (dormant), so they're easy to bring back if Mike wants.
 - So the active bed = **Pad (warmth) + Pulse/Ghost (drums) + Bass (body)**.
 
+### Additive build is now the DEFAULT (2026-05-31) — fixed dom-dom-dom regression
+Mike: it was hitting "dom dom dom dom" from t=0 instead of being "almost not
+noticeable" like the original Buildup spec. Root cause: when the Buildup toggle
+was removed from the UI in the declutter pass, the build behaviour wasn't wired
+in as the DEFAULT — Beat-on was going straight to full kick + half-bar bass.
+Researched: Steve Reich/Drumming + West African drum-circle = "additive
+minimalism" (voices enter one at a time, each repeats — the "people in public
+adding to a beat" metaphor exactly). Rewrote so:
+- **`BuildupEnvelope` is now ease-in (p²)** instead of smoothstep — at 1 min in
+  = 0.0028 (≈0.3% — truly imperceptible); at 5 min in = 0.25; reaches 1.0 at
+  `BuildupSeconds`=600s (10 min).
+- **`Conductor.Step` ALWAYS runs the build**: density scales with envelope,
+  voices enter ONE AT A TIME at envelope thresholds (Pulse always = the lone
+  tapper; Ghost > 0.20 ≈ 4.5 min; Bass > 0.40 ≈ 6.3 min; Splash > 0.70 ≈ 8.4 min).
+  Arousal response is also gated by the envelope — thermostat barely moves during
+  the build, fades in as it assembles.
+- **`BeatPattern` bar-start kicks are now probabilistic too** at low intensity
+  (was unconditional — the actual source of "dom dom dom"). At intensity = 0.01,
+  bar-start prob ≈ 0.06 → about one kick per minute. At intensity = 1.0 short
+  circuit keeps byte-identical default behaviour.
+- **`ArousalMin` floor is now scaled by the build** so it doesn't snap the tempo
+  up during the silent start.
+- **`_buildGain` output crescendo (0.06 → 1.0)** applied always (was opt-in).
+- **`BuildupSpec`, `Buildup` property removed** — subsumed into Step.
+- Focused preset base trimmed to just `Pulse`.
+- All this means Demo (TimeScale=20) still works to audition the 10-min build in
+  ~30s.
+
 ### Deep bass + splashes + declutter (2026-05-31) — refines the above
 Mike: drop the bass an octave + long resonance ("booooommm"); the pad sounded like
 a low guitar-strum chord → **remove it**; keep only low bass + drum hits driving;
