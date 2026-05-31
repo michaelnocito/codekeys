@@ -10,7 +10,7 @@ public class BeatPatternTests
         BeatPreset.Focused, 80, BeatScale.Dorian, "D3", LoopBars: 2,
         Density: density, Swing: 0.3, GhostNotes: 0.5,
         Accents: new[] { 0, 8, 16 },
-        Layers: new[] { BeatLayer.Pad, BeatLayer.Pulse, BeatLayer.Marimba, BeatLayer.Melody, BeatLayer.Ghost });
+        Layers: new[] { BeatLayer.Pad, BeatLayer.Pulse, BeatLayer.Marimba, BeatLayer.Melody, BeatLayer.Chime, BeatLayer.Ghost });
 
     private static HashSet<int> ScalePitchClasses(BeatSpec spec)
     {

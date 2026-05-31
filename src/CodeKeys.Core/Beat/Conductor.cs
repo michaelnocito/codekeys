@@ -106,9 +106,12 @@ public static class Conductor
         };
         double density = Clamp((0.28 + 0.42 * next) * arcMult, 0.12, 0.85);
 
-        // The arc owns the two "developmental" voices; pad/pulse/ghost are kept as-is.
-        var layers = current.Layers.Where(l => l != BeatLayer.Melody && l != BeatLayer.Marimba).ToList();
+        // The arc owns the "developmental" voices; pad/pulse/ghost are kept as-is.
+        var layers = current.Layers
+            .Where(l => l != BeatLayer.Melody && l != BeatLayer.Marimba && l != BeatLayer.Chime)
+            .ToList();
         if (phase >= Phase.Statement)   layers.Add(BeatLayer.Melody);
+        if (phase >= Phase.Statement)   layers.Add(BeatLayer.Chime);   // sparkle once the melody is in
         if (phase >= Phase.Development) layers.Add(BeatLayer.Marimba);
 
         return current with { Bpm = bpm, Density = density, Layers = layers.ToArray() };

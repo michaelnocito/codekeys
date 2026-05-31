@@ -134,6 +134,7 @@ public sealed class BeatSequencer : ISampleProvider
         Put(BeatLayer.Pulse, root);
         Put(BeatLayer.Ghost, root + 24);
         foreach (int deg in new[] { 0, 2, 4 }) Put(BeatLayer.Pad, scale.DegreeToMidi(root, deg));
+        foreach (int deg in new[] { 0, 2, 4 }) Put(BeatLayer.Chime, scale.DegreeToMidi(root + 24, deg)); // high sparkle
         for (int d = 0; d < span; d++)
         {
             int midi = scale.DegreeToMidi(root + 12, d);
@@ -157,6 +158,10 @@ public sealed class BeatSequencer : ISampleProvider
             BeatLayer.Melody => SynthVoiceFactory.CreateTone(f, _rate, Waveform.WarmPad,
                                 new Envelope { Attack = 0.03, Decay = 0.25, Sustain = 0.4, Release = 0.7 },
                                 holdSeconds: 0.22, gain: 0.30f),
+            // Soft bell: pure sine with a long, clean decay — a delicate high sparkle, sits well back.
+            BeatLayer.Chime => SynthVoiceFactory.CreateTone(f, _rate, Waveform.Sine,
+                                new Envelope { Attack = 0.002, Decay = 1.4, Sustain = 0.0, Release = 0.1 },
+                                holdSeconds: 0.0, gain: 0.40f),
             BeatLayer.Ghost => PercussionFactory.CreateTap(f, _rate, decaySeconds: 0.045, noiseAmount: 0.25),
             _ => SynthVoiceFactory.CreateTone(f, _rate, Waveform.Sine, Envelope.Pluck)
         };

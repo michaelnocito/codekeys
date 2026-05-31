@@ -56,6 +56,16 @@ public static class BeatPattern
                 hits.Add(new BeatHit(s, BeatLayer.Marimba, midi, accents.Contains(s) ? 0.9 : 0.7, swing));
             }
 
+            // Chime: sparse, soft high bells on the 8th-note grid — a little sparkle that ebbs and
+            // flows with density (so it grows/shrinks "as needed") and varies per loop. A small touch.
+            if (Has(BeatLayer.Chime) && s % 2 == 0 && rng.Next() < spec.Density * 0.10)
+            {
+                int[] tones = { 0, 2, 4 }; // high chord tones only → always consonant, never busy
+                int deg = tones[(int)(rng.Next() * tones.Length)];
+                int midi = scale.DegreeToMidi(root + 24, deg);
+                hits.Add(new BeatHit(s, BeatLayer.Chime, midi, 0.25, swing));
+            }
+
             // Ghost: glitchy fills, probability scaled by the backspace-driven ghost amount.
             if (Has(BeatLayer.Ghost) && rng.Next() < spec.GhostNotes * 0.25)
                 hits.Add(new BeatHit(s, BeatLayer.Ghost, root + 24, 0.35, swing));

@@ -140,10 +140,21 @@ mid = 1.25×) sets it live. Responsiveness fade-in + deadband still apply on top
 1 new test. (Note: "⚡ Demo build-up" = compresses the arc clock 20× for auditioning;
 does NOT change reaction speed — that's what the Reactivity slider is for.)
 
+### Chime / musicality layer (2026-05-31)
+Mike wanted more musical variance — soft chimes/effects that increase or decrease
+as needed. Added a new `BeatLayer.Chime`: sparse soft sine **bells** (custom long-
+decay envelope, gain 0.4) on high chord tones (root+24, degrees 0/2/4 → always
+consonant). Pattern: 8th-grid, prob `Density*0.10`, varies per loop (cycle seed),
+hit gain 0.25. Conductor adds Chime from the **Statement** phase (with the melody);
+because probability tracks Density, it naturally grows in fuller moments and thins
+when calm. Baked in `BeatSequencer.BakeBank`. Added to FullSpec test + arc tests.
+
 ### NEXT (after Mike's ear test)
 - **Re-tune by ear** the consts in `Conductor.cs`; `_keysLevel`/`_bedLevel` in
   `AudioEngine.cs`. Back-beat variance knobs: off-beat prob `Density*0.30`, fill
-  cadence `cycle % 2` in `BeatPattern`. Reactivity now also live via the slider.
+  cadence `cycle % 2`; chime density `Density*0.10` in `BeatPattern`. Reactivity
+  live via the slider. Could add more soft effects (e.g. a rare shimmer/pad swell)
+  if Mike wants — same pattern as Chime.
   Does it now feel like background that holds the pulse and only guides when sure?
 - Possible deeper **voice enrichment** from the library (soft Rhodes/bells/richer
   pad) — held back because Mike likes the base tone; pick by ear next.

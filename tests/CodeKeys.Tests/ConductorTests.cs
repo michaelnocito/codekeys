@@ -147,14 +147,16 @@ public class ConductorTests
         var next = Conductor.Step(Spec(), 0.6, elapsedSeconds: 10, dtSeconds: 5, Lo, Hi);
         Assert.DoesNotContain(BeatLayer.Melody, next.Layers);
         Assert.DoesNotContain(BeatLayer.Marimba, next.Layers);
+        Assert.DoesNotContain(BeatLayer.Chime, next.Layers);
         Assert.Contains(BeatLayer.Pulse, next.Layers); // base voices stay
     }
 
     [Fact]
-    public void Step_In_Statement_Adds_Melody_But_Not_Marimba()
+    public void Step_In_Statement_Adds_Melody_And_Chime_But_Not_Marimba()
     {
         var next = Conductor.Step(Spec(), 0.6, elapsedSeconds: 200, dtSeconds: 5, Lo, Hi);
         Assert.Contains(BeatLayer.Melody, next.Layers);
+        Assert.Contains(BeatLayer.Chime, next.Layers);
         Assert.DoesNotContain(BeatLayer.Marimba, next.Layers);
     }
 
