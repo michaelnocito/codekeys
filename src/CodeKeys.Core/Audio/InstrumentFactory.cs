@@ -132,9 +132,14 @@ public static class InstrumentFactory
         var s = new float[count];
 
         // Inharmonic ratios + per-partial amplitudes + decay rates (higher partials fade faster).
+        // Decay rates are deliberately gentle — real Tibetan bowls sustain for 8-30 seconds, not the
+        // 2-3 seconds a struck piano-like envelope gives. With the 0.20 outer multiplier (vs 0.6
+        // before) the fundamental is still at ~5% at 15 s, so the buffer carries a long, slowly
+        // dissolving ring instead of a quick puff.
         double[] ratios = { 1.00, 2.76, 5.40, 8.93 };
         double[] amps   = { 1.00, 0.55, 0.28, 0.14 };
         double[] decays = { 1.0, 1.5, 2.3, 3.2 };
+        const double decayMultiplier = 0.20;
         const double detuneHz = 0.6;      // small detune between paired partials -> shimmer
 
         // Smoothstep fade-in (3p²-2p³) over the attack window — softer than a linear ramp, so
@@ -155,7 +160,7 @@ public static class InstrumentFactory
             {
                 double f = freq * ratios[k];
                 if (f > sampleRate / 2.0) break;
-                double envK = Math.Exp(-t * decays[k] * 0.6);
+                double envK = Math.Exp(-t * decays[k] * decayMultiplier);
                 double primary = Math.Sin(2.0 * Math.PI * f * t);
                 double shimmer = Math.Sin(2.0 * Math.PI * (f + detuneHz) * t);
                 v += amps[k] * envK * 0.5 * (primary + shimmer);

@@ -53,8 +53,8 @@ public sealed class MainWindow : Form
         var baked = PresetLibrary.Default.Build(AudioEngine.InternalRate);
         _keystrokes = new KeystrokeController(baked.Map, baked.Voices, _engine);
 
-        // Generative beat bed (default mood: Focused).
-        var spec = SignalsToBeat.Of(DefaultSignals, BeatPreset.Focused);
+        // Default beat = Root chakra (Mike's current test baseline — paired with Midnight).
+        var spec = SignalsToBeat.Of(DefaultSignals, BeatPreset.Root);
         _beat = new BeatSequencer(AudioEngine.InternalRate, spec);
 
         BuildUi();
@@ -63,6 +63,9 @@ public sealed class MainWindow : Form
         // Fixed internal headroom. The user controls loudness through Windows (WASAPI shared mode
         // means CodeKeys is its own entry in the system volume mixer) — no separate in-app slider.
         _engine.MasterVolume = 0.85f;
+        // Both layers ON at startup at their current slider levels (keys 0.55, beat 0.22).
+        _engine.BedEnabled = true;
+        _beat.Reset();
         _engine.Start();
 
         _hook.KeyDown += OnHookKeyDown;
@@ -152,7 +155,7 @@ public sealed class MainWindow : Form
         _keysToggle = new CheckBox { Text = "⌨  Keystrokes", Checked = true, AutoSize = true, Left = 16, Top = 92 };
         _keysToggle.CheckedChanged += (_, _) => _keystrokes.Enabled = _keysToggle.Checked;
 
-        _bedToggle = new CheckBox { Text = "🥁  Beat", Checked = false, AutoSize = true, Left = 16, Top = 124 };
+        _bedToggle = new CheckBox { Text = "🥁  Beat", Checked = true, AutoSize = true, Left = 16, Top = 124 };
         _bedToggle.CheckedChanged += (_, _) =>
         {
             _engine.BedEnabled = _bedToggle.Checked;
@@ -183,7 +186,7 @@ public sealed class MainWindow : Form
             new ChakraOption(BeatPreset.ThirdEye,    "Third Eye · 852 Hz"),
             new ChakraOption(BeatPreset.Crown,       "Crown · 963 Hz"),
         });
-        _chakraPicker.SelectedIndex = 0;
+        _chakraPicker.SelectedIndex = 1; // Root chakra — Mike's current test baseline
         _chakraPicker.SelectedIndexChanged += OnChakraChanged;
 
         // Dev aid: compress the build clock 20× so the arc is auditionable in seconds.
