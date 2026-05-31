@@ -72,6 +72,35 @@ public sealed class KeyVoiceSet
     }
 
     /// <summary>
+    /// Like <see cref="Bake"/>, but the renderer also receives each note's position
+    /// (index, total) ordered low→high. Lets a single preset assign different voices to
+    /// different pitch zones — e.g. deep thumps low, pops in the middle, a smooth synth up
+    /// top — so a blend feels "occasional" as you type.
+    /// </summary>
+    public static KeyVoiceSet BakeNotes(
+        SpatialKeyMap map,
+        int sampleRate,
+        Func<int, int, double, SampleBuffer> renderNote,
+        SampleBuffer space,
+        SampleBuffer enter,
+        SampleBuffer backspace)
+    {
+        var notes = new SortedSet<int>();
+        foreach (var vk in KeyboardLayout.DefaultOrder)
+        {
+            var s = map.Resolve(vk);
+            if (s.Category == KeyCategory.Pitched) notes.Add(s.MidiNote);
+        }
+
+        var ordered = notes.ToList();
+        var pitched = new Dictionary<int, SampleBuffer>(ordered.Count);
+        for (int i = 0; i < ordered.Count; i++)
+            pitched[ordered[i]] = renderNote(i, ordered.Count, NoteUtil.MidiToFrequency(ordered[i]));
+
+        return new KeyVoiceSet(sampleRate, pitched, space, enter, backspace);
+    }
+
+    /// <summary>
     /// Bake a melodic synth voice set (the "Keyboard" preset). Pitched keys are tones on
     /// the scale; the rhythm keys get musical sounds derived from the same root.
     /// </summary>

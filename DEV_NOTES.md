@@ -20,11 +20,13 @@ Working app, system-wide. Builds clean, **59/59 unit tests pass**.
 3. Spatial key map, procedural synth, click-free envelopes.
 4. **Global WH_KEYBOARD_LL hook** — sounds in any app. MainWindow control panel.
 5. **Presets** (research-grounded): live dropdown switching, lazy baking.
-   **9 presets** — focus: Keyboard, **Pulse** (default), Thock; character:
-   Neon Nights (synthwave / "Blinding Lights"), After Dark (dark pluck /
-   "Starboy"), Electric (guitar), Grand Piano, Rhodes, Marimba. Synthesis in
-   Core/Audio: Synth/Percussion/String/Instrument factories. Rationale + the
-   preset table + sources: `docs/sound-design.md`.
+   **9 presets** (dropdown). **Midnight** (default) = deep-beat blend: per-key
+   pitch zones via KeyVoiceSet.BakeNotes — deep kick thumps low, tap pops mid,
+   smooth warm synth on top keys, snare on Enter. Others: Pulse, Thock, Keyboard,
+   After Dark (dark pluck / "Starboy"), Electric (guitar), Grand Piano, Rhodes,
+   Marimba. (Neon Nights removed per Mike; CreateSuperSaw kept in InstrumentFactory.)
+   Synthesis in Core/Audio: Synth/Percussion/String/Instrument factories.
+   Preset table + sources: `docs/sound-design.md`.
 
 ## Open / next (in rough priority)
 - **Tune the low-beat presets by ear** (Mike used "works for now" — revisit when

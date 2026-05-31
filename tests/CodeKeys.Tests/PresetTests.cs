@@ -19,9 +19,15 @@ public class PresetTests
     }
 
     [Fact]
-    public void Default_Is_The_Low_Beat()
+    public void Default_Is_The_Deep_Beat_Blend()
     {
-        Assert.Equal("pulse", PresetLibrary.Default.Id);
+        Assert.Equal("midnight", PresetLibrary.Default.Id);
+    }
+
+    [Fact]
+    public void Neon_Nights_Was_Removed()
+    {
+        Assert.Null(PresetLibrary.ById("neon-nights"));
     }
 
     [Fact]
@@ -53,7 +59,7 @@ public class PresetTests
         // current three + two song packs + guitar + piano + two bonuses
         var ids = PresetLibrary.All.Select(p => p.Id).ToList();
         Assert.Equal(ids.Count, ids.Distinct().Count()); // ids unique
-        foreach (var id in new[] { "neon-nights", "after-dark", "electric", "piano", "rhodes", "marimba" })
+        foreach (var id in new[] { "midnight", "pulse", "thock", "after-dark", "electric", "piano", "rhodes", "marimba" })
             Assert.Contains(id, ids);
     }
 

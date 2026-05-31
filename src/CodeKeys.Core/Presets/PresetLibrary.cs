@@ -21,10 +21,10 @@ public static class PresetLibrary
 {
     public static IReadOnlyList<Preset> All { get; } = new[]
     {
-        Keyboard(),
+        Midnight(),
         Pulse(),
         Thock(),
-        NeonNights(),
+        Keyboard(),
         AfterDark(),
         Electric(),
         GrandPiano(),
@@ -32,7 +32,7 @@ public static class PresetLibrary
         Marimba(),
     };
 
-    public static Preset Default => All[1]; // Pulse — the low-beat set Mike asked to lead with
+    public static Preset Default => ById("midnight") ?? All[0]; // the deep-beat blend Mike dialed in
 
     public static Preset? ById(string id) =>
         All.FirstOrDefault(p => string.Equals(p.Id, id, StringComparison.OrdinalIgnoreCase));
@@ -87,22 +87,35 @@ public static class PresetLibrary
             return new BakedPreset(map, voices);
         });
 
-    // --- Neon Nights: 80s synthwave (inspired by The Weeknd, "Blinding Lights") ---
-    private static Preset NeonNights() => new(
-        "neon-nights", "Neon Nights (synthwave)",
-        "Bright detuned-saw synth + gated beat. Inspired by The Weeknd, 'Blinding Lights'.",
+    // --- Midnight: deep beat blend (Pulse thump + Thock pops + occasional smooth synth/snare) ---
+    private static Preset Midnight() => new(
+        "midnight", "Midnight (deep beat)",
+        "Deep bass thump + drum pops, with an occasional smooth synth and snare.",
         rate =>
         {
-            var map = new SpatialKeyMap(Scale.MinorPentatonic, NoteUtil.ParseNoteName("F3"), octaves: 2);
-            var env = new Envelope { Attack = 0.005, Decay = 0.12, Sustain = 0.30, Release = 0.16 };
+            // Low + two octaves so there's room for zones: thumps low, pops mid, synth up top.
+            var map = new SpatialKeyMap(Scale.MinorPentatonic, NoteUtil.ParseNoteName("A2"), octaves: 2);
+            double root = NoteUtil.MidiToFrequency(map.RootMidi);
 
-            var space = PercussionFactory.CreateKick(55, rate, bodyDecaySeconds: 0.18, clickAmount: 0.10);   // four-on-floor kick
-            var enter = PercussionFactory.CreateSnare(rate, decaySeconds: 0.18);                              // gated snare
-            var backspace = PercussionFactory.CreateKick(55, rate, bodyDecaySeconds: 0.10, clickAmount: 0.08);
+            // A soft, rounded synth so it reads as "smooth", kept quiet so it stays occasional.
+            var smoothEnv = new Envelope { Attack = 0.010, Decay = 0.18, Sustain = 0.40, Release = 0.26 };
 
-            var voices = KeyVoiceSet.Bake(map, rate,
-                f => InstrumentFactory.CreateSuperSaw(f, rate, env, holdSeconds: 0.14),
-                space, enter, backspace);
+            SampleBuffer RenderBlend(int i, int n, double freq)
+            {
+                // Top ~25% of pitches (the highest keys) → smooth synth. The rest alternate
+                // deep thump / drum pop. Same key always → same voice (deterministic).
+                if (i >= n * 0.75)
+                    return SynthVoiceFactory.CreateTone(freq, rate, Waveform.WarmPad, smoothEnv, holdSeconds: 0.16, gain: 0.5f);
+                return (i % 2 == 0)
+                    ? PercussionFactory.CreateKick(freq, rate, bodyDecaySeconds: 0.22, clickAmount: 0.08) // deep thump
+                    : PercussionFactory.CreateTap(freq, rate, decaySeconds: 0.07, noiseAmount: 0.20);     // drum pop
+            }
+
+            var space = PercussionFactory.CreateKick(root * 0.75, rate, bodyDecaySeconds: 0.26, clickAmount: 0.07); // deepest thump
+            var enter = PercussionFactory.CreateSnare(rate, decaySeconds: 0.16);                                    // occasional snare
+            var backspace = PercussionFactory.CreateTap(root, rate, decaySeconds: 0.06, noiseAmount: 0.18);         // pop
+
+            var voices = KeyVoiceSet.BakeNotes(map, rate, RenderBlend, space, enter, backspace);
             return new BakedPreset(map, voices);
         });
 

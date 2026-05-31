@@ -48,10 +48,10 @@ instrument; Space/Enter/Backspace get matching beats/accents.
 
 | Preset | Voice | Pitch range | Intent |
 |---|---|---|---|
+| **Midnight (deep beat)** | per-zone blend: deep kick thump + tap pops, smooth warm synth on top keys, snare on Enter | 2 octaves (A minor) | Deep bass thump + drum pops with occasional smooth synth/snare. **Default.** |
 | **Keyboard (melodic)** | warm synth tone | 2 octaves (wide) | The fun, higher-interference template. Kept to clone from. |
-| **Pulse (low beat)** | soft low kick (pitch-drop sine + tick) | 1 low octave (A2) | The satisfying low beat; calm enough to fade out. **Default.** |
+| **Pulse (low beat)** | soft low kick (pitch-drop sine + tick) | 1 low octave (A2) | The satisfying low beat; calm enough to fade out. |
 | **Thock (deep tap)** | damped low tone + knock | 1 low octave (A2) | Most neutral, lowest distraction. |
-| **Neon Nights (synthwave)** | detuned supersaw + gated kick/snare | 2 octaves (F minor) | 80s synthwave. Inspired by The Weeknd, *"Blinding Lights"*. |
 | **After Dark (dark pluck)** | Karplus pluck + 808 sub & clap | 1 low octave (A minor) | Dark, sparse, bouncy. Inspired by The Weeknd × Daft Punk, *"Starboy"*. |
 | **Electric (guitar)** | Karplus–Strong plucked string | 2 octaves (E minor) | Clean electric guitar. |
 | **Grand Piano** | additive harmonics + inharmonicity | 2 octaves (C) | Acoustic piano. |
