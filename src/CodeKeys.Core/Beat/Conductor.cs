@@ -16,11 +16,15 @@ namespace CodeKeys.Core.Beat;
 public static class Conductor
 {
     // ---- tunables (expected to be tuned by ear) ----
-    public const double FlowCenter = 0.6;   // target arousal (Yerkes-Dodson optimum, leans active)
-    public const double LeadGain   = 0.45;  // counter-active strength: how hard we steer back to centre
-    public const double ArousalMin = 0.20;  // never fully dead
-    public const double ArousalMax = 0.90;  // never frantic
-    public const double SlewPerSec = 0.006; // max arousal change per second (gentle: ~a minute end-to-end)
+    // Philosophy: this is a BACKGROUND pulse. It holds steady and only guides when it's really sure
+    // the user has drifted — the user is doing another task, so we create space, we don't compete.
+    public const double FlowCenter = 0.5;    // resting arousal the pulse sits at (calm, mid-tempo)
+    public const double LeadGain   = 0.25;   // how hard we steer back — low, so any guidance is gentle
+    public const double Deadband   = 0.18;   // only react once the user is CLEARLY outside this band
+    public const double ArousalMin = 0.20;   // never fully dead
+    public const double ArousalMax = 0.85;   // never frantic
+    public const double SlewPerSec = 0.004;  // max arousal change per second (very gentle ramp)
+    public const double ResponsivenessFullAt = 300; // seconds: adaptation fades IN slowly from the base beat
 
     // session-arc phase boundaries, in seconds
     public const double EstablishUntil   = 120;  // 0–2 min: pad + pulse only, sparse
@@ -53,10 +57,16 @@ public static class Conductor
 
     /// <summary>
     /// The arousal the music should aim for given the user's: a counter-active reflection about the
-    /// flow centre — over-aroused → aim lower (settle), under-aroused → aim higher (activate).
+    /// flow centre — over-aroused → aim lower (settle), under-aroused → aim higher (activate). Inside
+    /// the <see cref="Deadband"/> we don't react at all (aim = centre / hold), so the pulse only
+    /// guides once the user has clearly drifted; the response then ramps in from the band edge.
     /// </summary>
-    public static double MusicalTarget(double userArousal) =>
-        Clamp(FlowCenter + LeadGain * (FlowCenter - userArousal), ArousalMin, ArousalMax);
+    public static double MusicalTarget(double userArousal)
+    {
+        double dev = userArousal - FlowCenter;
+        double beyond = Math.Abs(dev) <= Deadband ? 0.0 : dev - Math.Sign(dev) * Deadband;
+        return Clamp(FlowCenter - LeadGain * beyond, ArousalMin, ArousalMax);
+    }
 
     /// <summary>
     /// Advance the beat one loop toward the flow target and along the session arc. Preserves tonal
@@ -69,20 +79,25 @@ public static class Conductor
         // Read current musical arousal back from where the tempo sits in the preset's range.
         double m = bpmHi > bpmLo ? Clamp((current.Bpm - bpmLo) / (double)(bpmHi - bpmLo), 0, 1) : 0.5;
 
+        // Responsiveness fades in over the first few minutes: early on the beat just holds the base
+        // pulse, then it gradually starts responding to typing — a slow, perceptible transition.
+        double responsiveness = Clamp(elapsedSeconds / ResponsivenessFullAt, 0, 1);
+
         double target   = MusicalTarget(userArousal);
         double maxDelta = SlewPerSec * Math.Max(dtSeconds, 0);
-        double next     = Clamp(m + Clamp(target - m, -maxDelta, maxDelta), ArousalMin, ArousalMax);
+        double move     = Clamp(target - m, -maxDelta, maxDelta) * responsiveness;
+        double next     = Clamp(m + move, ArousalMin, ArousalMax);
 
         int bpm = (int)Math.Round(bpmLo + (bpmHi - bpmLo) * next, MidpointRounding.AwayFromZero);
 
         var phase = PhaseAt(elapsedSeconds);
         double arcMult = phase switch
         {
-            Phase.Establish => 0.6,
-            Phase.Statement => 0.8,
-            _               => 1.0, // Development + Flow
+            Phase.Establish => 0.55,
+            Phase.Statement => 0.75,
+            _               => 0.9, // Development + Flow — kept under 1 to leave space
         };
-        double density = Clamp((0.35 + 0.55 * next) * arcMult, 0.15, 1.0);
+        double density = Clamp((0.28 + 0.42 * next) * arcMult, 0.12, 0.85);
 
         // The arc owns the two "developmental" voices; pad/pulse/ghost are kept as-is.
         var layers = current.Layers.Where(l => l != BeatLayer.Melody && l != BeatLayer.Marimba).ToList();

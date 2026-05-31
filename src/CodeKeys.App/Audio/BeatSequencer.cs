@@ -85,7 +85,10 @@ public sealed class BeatSequencer : ISampleProvider
     /// </summary>
     public void Observe(double arousal)
     {
-        lock (_gate) _userArousal = Math.Min(1.0, Math.Max(0.0, arousal));
+        double a = Math.Min(1.0, Math.Max(0.0, arousal));
+        // Smooth toward the new reading (on top of the 30s signals window) so the conductor follows
+        // a settled trend, never a single snapshot — deliberately not hyper-responsive.
+        lock (_gate) _userArousal += (a - _userArousal) * 0.25;
     }
 
     /// <summary>
@@ -131,12 +134,16 @@ public sealed class BeatSequencer : ISampleProvider
         double f = NoteUtil.MidiToFrequency(midi);
         SampleBuffer buf = layer switch
         {
-            BeatLayer.Pulse => PercussionFactory.CreateKick(f, _rate, bodyDecaySeconds: 0.22, clickAmount: 0.06),
+            BeatLayer.Pulse => PercussionFactory.CreateKick(f, _rate, bodyDecaySeconds: 0.22, clickAmount: 0.04),
             BeatLayer.Pad => SynthVoiceFactory.CreateTone(f, _rate, Waveform.WarmPad,
                                 new Envelope { Attack = 0.06, Decay = 0.5, Sustain = 0.6, Release = 0.9 },
                                 holdSeconds: 1.2, gain: 0.35f),
             BeatLayer.Marimba => InstrumentFactory.CreateMarimba(f, _rate),
-            BeatLayer.Melody => SynthVoiceFactory.CreateTone(f, _rate, Waveform.WarmPad, Envelope.Pluck, 0.18, 0.45f),
+            // Soft, ambient melody — gentle fade-in + long tail so it floats behind the work instead
+            // of plucking to the front (same WarmPad tone Mike likes, just sat well back).
+            BeatLayer.Melody => SynthVoiceFactory.CreateTone(f, _rate, Waveform.WarmPad,
+                                new Envelope { Attack = 0.03, Decay = 0.25, Sustain = 0.4, Release = 0.7 },
+                                holdSeconds: 0.22, gain: 0.30f),
             BeatLayer.Ghost => PercussionFactory.CreateTap(f, _rate, decaySeconds: 0.045, noiseAmount: 0.25),
             _ => SynthVoiceFactory.CreateTone(f, _rate, Waveform.Sine, Envelope.Pluck)
         };

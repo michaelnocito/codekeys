@@ -17,7 +17,9 @@ public sealed class SignalsCollector
 
     private readonly record struct Entry(long T, KeyKind Kind, bool Upper);
 
-    public SignalsCollector(long windowMs = 12000) => _windowMs = windowMs;
+    // A long window (30s) on purpose: it averages over far more typing, so the arousal estimate
+    // is stable and not hyper-responsive — we want to read a settled trend, not every burst.
+    public SignalsCollector(long windowMs = 30000) => _windowMs = windowMs;
 
     /// <summary>Record one key-down. Pure modifiers and unknown keys are ignored.</summary>
     public void Record(long timestampMs, KeyKind kind, bool isUpper = false)

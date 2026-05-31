@@ -40,7 +40,7 @@ public sealed class AudioEngine : IDisposable, IVoicePlayer
 
     // State
     private float _masterVolume = 1.0f;
-    private float _bedLevel = 0.25f; // ≈ −12 dB under the keys
+    private float _bedLevel = 0.16f; // ≈ −16 dB under the keys — sit it well back (background, not foreground)
     private bool _keysEnabled = true;
     private bool _bedEnabled = false;
     private bool _muted = false;

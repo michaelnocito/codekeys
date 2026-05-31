@@ -58,6 +58,15 @@ public class ConductorTests
     }
 
     [Fact]
+    public void MusicalTarget_Holds_Inside_The_Deadband()
+    {
+        // Small deviations (within the band) → no steering at all: the aim stays at the centre,
+        // so the pulse only guides once the user has clearly drifted.
+        Assert.Equal(Conductor.FlowCenter, Conductor.MusicalTarget(Conductor.FlowCenter + 0.10), 3);
+        Assert.Equal(Conductor.FlowCenter, Conductor.MusicalTarget(Conductor.FlowCenter - 0.10), 3);
+    }
+
+    [Fact]
     public void MusicalTarget_Decreases_As_User_Arousal_Rises()
     {
         double prev = double.MaxValue;
@@ -99,6 +108,15 @@ public class ConductorTests
     {
         var next = Conductor.Step(Spec(bpm: 80), userArousal: 0.1, elapsedSeconds: 800, dtSeconds: 0, Lo, Hi);
         Assert.Equal(80, next.Bpm);
+    }
+
+    [Fact]
+    public void Step_Early_Session_Holds_The_Base_Pulse()
+    {
+        // At t=0 responsiveness is 0, so even frantic typing doesn't move the tempo yet — the
+        // adaptation fades in slowly over the first minutes (the "base beat → responding" transition).
+        var next = Conductor.Step(Spec(bpm: 78), userArousal: 1.0, elapsedSeconds: 0, dtSeconds: 30, Lo, Hi);
+        Assert.Equal(78, next.Bpm);
     }
 
     [Fact]
@@ -166,6 +184,6 @@ public class ConductorTests
     [Fact]
     public void BpmRange_Returns_The_Preset_Window()
     {
-        Assert.Equal((72, 84), SignalsToBeat.BpmRange(BeatPreset.Focused));
+        Assert.Equal((60, 72), SignalsToBeat.BpmRange(BeatPreset.Focused));
     }
 }

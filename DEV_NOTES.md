@@ -65,11 +65,14 @@ physiological claims). Roadmap "v2 adaptive engine" section has the full spec.
 - **`Core/Beat/Conductor.cs`** (pure, deterministic, 24 tests):
   - `Estimate(Signals)→arousal 0..1` = 0.55·speed + 0.25·erraticness +
     0.20·struggle(backspaces); idle reads 0.25.
-  - `MusicalTarget(a)` = **counter-active** reflection about `FlowCenter` (0.6):
-    over-aroused → aim lower (settle), under → aim higher (activate).
+  - `MusicalTarget(a)` = **counter-active** reflection about `FlowCenter` (0.5)
+    with a **Deadband** (0.18): inside the band it doesn't steer at all (hold the
+    pulse); past it, over-aroused → aim lower (settle), under → aim higher.
   - `Step(spec, arousal, elapsed, dt, lo, hi)` rate-limits arousal to
-    `SlewPerSec`(0.006)/s (≈a minute end-to-end → gentle), maps it to bpm+density
-    within the preset range, and runs the **session arc** by elapsed time:
+    `SlewPerSec`(0.004)/s, **scales the move by a responsiveness ramp**
+    (`elapsed/ResponsivenessFullAt`, 300s) so adaptation fades IN from the base
+    beat, maps it to bpm+density within the preset range, and runs the
+    **session arc** by elapsed time:
     Establish 0–2m (pad+pulse, sparse) → Statement 2–6m (melody enters) →
     Development 6–12m (marimba joins) → Flow 12m+ (sustain). Preserves
     scale/root/preset/loopBars → renderer never rebakes.
@@ -89,9 +92,27 @@ physiological claims). Roadmap "v2 adaptive engine" section has the full spec.
 - **Motif seed stabilized**: `motif|preset|scale|root` only (dropped bpm/loopBars)
   so the conductor's tempo drift can't scramble the tune.
 
+### Tuning pass — "more background, less reactive" (2026-05-30)
+Mike: it drove to the forefront / competed with the work; sensitivity too high;
+wanted a slow transition from base beat → responding; larger sample size; keep
+the base tone. Applied:
+- **Quieter / more space**: bed −12dB→−16dB (`_bedLevel` 0.25→0.16); melody voice
+  softened (gentle 30ms attack + 0.7s tail, gain 0.45→0.30, WarmPad tone kept);
+  motif now 3–5 notes (was 4–7) at lower gains (0.26–0.32); density ceiling cut
+  (arcMult ≤0.9, density formula `0.28+0.42·m`, cap 0.85); kick click 0.06→0.04.
+- **Calmer tempo**: Focused 72–84 → **60–72 BPM**.
+- **Less reactive / only when sure**: `FlowCenter` 0.6→0.5, `LeadGain` 0.45→0.25,
+  `SlewPerSec` 0.006→0.004, new **`Deadband` 0.18** (hold unless clearly drifted),
+  new **responsiveness ramp** (`ResponsivenessFullAt` 300s) so it starts as just
+  the base beat and slowly begins responding.
+- **Larger sample**: `SignalsCollector` window 12s→**30s** + EMA smoothing (0.25)
+  on the arousal estimate in `Observe`.
+
 ### NEXT (after Mike's ear test)
-- **Tune by ear**: FlowCenter, LeadGain, SlewPerSec, arc phase lengths, melody
-  volume. Does "calm on speed-up / energize on slow-down" feel right & gentle?
+- **Re-tune by ear** the above knobs (all consts in `Conductor.cs` / easy to find).
+  Does it now feel like background that holds the pulse and only guides when sure?
+- Possible deeper **voice enrichment** from the library (soft Rhodes/bells/richer
+  pad) — held back because Mike likes the base tone; pick by ear next.
 - Motif *development* via transforms (invert/transpose) per arc phase — needs a
   `Development` field on BeatSpec; deferred to keep this change bounded.
 - Resolution phase on idle (wind down when the user stops), not just by timer.

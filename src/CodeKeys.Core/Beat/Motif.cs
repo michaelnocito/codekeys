@@ -46,8 +46,9 @@ public static class MotifFactory
         var rng = new Prng(seed);
         int top = Math.Max(4, scaleDegrees); // ceiling for the melodic register (~one octave)
 
-        // Rhythm: 4..7 notes placed on distinct grid steps, downbeat always articulated.
-        int noteCount = 4 + (int)(rng.Next() * 4);
+        // Rhythm: 3..5 notes placed on distinct grid steps, downbeat always articulated. Fewer notes
+        // = more space, so the melody breathes and stays in the background instead of chattering.
+        int noteCount = 3 + (int)(rng.Next() * 3);
         var steps = PickSteps(rng, noteCount);
 
         // Pitch contour: open on a chord tone, move mostly by step, resolve onto a stable tone.
@@ -58,7 +59,7 @@ public static class MotifFactory
             if (i == 0) { /* keep the chord-tone opening */ }
             else if (i == steps.Count - 1) degree = Pick(rng, StableTones, top); // resolve
             else degree = NextDegree(rng, degree, top);
-            double gain = steps[i] % 4 == 0 ? 0.5 : 0.4; // notes on the beat sing a touch louder
+            double gain = steps[i] % 4 == 0 ? 0.32 : 0.26; // quiet — the melody floats, it doesn't lead
             notes.Add(new MotifNote(degree, steps[i], gain));
         }
         return new Motif(notes);

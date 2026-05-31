@@ -92,6 +92,6 @@ public class CaptureTests
         long t = 0;
         for (int i = 0; i < 50; i++) c.Record(t += 120, KeyKind.Letter);
         var spec = SignalsToBeat.Of(c.Snapshot(), BeatPreset.Focused);
-        Assert.InRange(spec.Bpm, 72, 84);
+        Assert.InRange(spec.Bpm, 60, 72);
     }
 }

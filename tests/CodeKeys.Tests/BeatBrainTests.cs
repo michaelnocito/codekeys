@@ -35,7 +35,7 @@ public class BeatBrainTests
     }
 
     [Theory]
-    [InlineData(BeatPreset.Focused, 72, 84, BeatScale.Dorian, "D3")]
+    [InlineData(BeatPreset.Focused, 60, 72, BeatScale.Dorian, "D3")]
     [InlineData(BeatPreset.Relaxed, 60, 70, BeatScale.MajorPentatonic, "C3")]
     [InlineData(BeatPreset.Burnout, 75, 88, BeatScale.Major, "F3")]
     [InlineData(BeatPreset.Silly, 100, 130, BeatScale.MajorPentatonic, "C4")]
@@ -54,8 +54,8 @@ public class BeatBrainTests
         var slow = SignalsToBeat.Of(Sample(avgGap: 500), BeatPreset.Focused);
         Assert.True(fast.Bpm >= slow.Bpm);
         Assert.True(fast.Density > slow.Density);
-        Assert.Equal(84, fast.Bpm); // speed=1 -> top of range
-        Assert.Equal(72, slow.Bpm); // speed=0 -> bottom
+        Assert.Equal(72, fast.Bpm); // speed=1 -> top of range
+        Assert.Equal(60, slow.Bpm); // speed=0 -> bottom
     }
 
     [Theory]

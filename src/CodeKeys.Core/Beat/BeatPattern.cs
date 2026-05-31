@@ -77,7 +77,7 @@ public static class BeatPattern
                 {
                     int step = barStart + mn.Step;
                     double swing = (step % 2 == 1) ? spec.Swing : 0.0;
-                    double gain = accents.Contains(step) ? Math.Min(1.0, mn.Gain + 0.2) : mn.Gain;
+                    double gain = accents.Contains(step) ? Math.Min(1.0, mn.Gain + 0.1) : mn.Gain;
                     int midi = scale.DegreeToMidi(melodyBase, mn.Degree);
                     hits.Add(new BeatHit(step, BeatLayer.Melody, midi, gain, swing));
                 }
