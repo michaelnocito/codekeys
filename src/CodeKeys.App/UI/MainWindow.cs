@@ -1,38 +1,57 @@
 using CodeKeys.App.Audio;
 using CodeKeys.App.Input;
-using CodeKeys.Core.Audio;
+using CodeKeys.Core.Beat;
 using CodeKeys.Core.Input;
 using CodeKeys.Core.Presets;
 
 namespace CodeKeys.App.UI;
 
 /// <summary>
-/// CodeKeys control panel (build step 4). All keystroke sound now comes from the
-/// system-wide hook, so typing in ANY application makes sound — this window can sit
-/// minimized. The ambient bed is parked: the toggle stays, but it's not the focus.
+/// CodeKeys control panel. Keystroke sound comes from the system-wide hook (type in any
+/// app), and an optional generative beat plays underneath at −12 dB, locked to the same
+/// scale so it never clashes. This window can sit minimized.
 /// </summary>
 public sealed class MainWindow : Form
 {
     private readonly AudioEngine _engine = new();
     private readonly GlobalKeyboardHook _hook = new();
     private readonly KeystrokeController _keystrokes;
+    private readonly BeatSequencer _beat;
 
     private CheckBox _keysToggle = null!;
     private CheckBox _bedToggle = null!;
     private TrackBar _volume = null!;
     private Label _status = null!;
     private ComboBox _presetPicker = null!;
+    private ComboBox _moodPicker = null!;
+
+    // Representative typing signals. NOTE: Text is intentionally left empty — CodeKeys never
+    // captures what you type (privacy), so the beat seeds from the mood, not your keystrokes.
+    private static readonly Signals DefaultSignals = new()
+    {
+        Text = "",
+        DurationMs = 8000,
+        CharCount = 60,
+        Backspaces = 2,
+        AvgGapMs = 180,
+        GapVariance = 120,
+        CapsRatio = 0.08,
+        PunctCount = 2,
+    };
 
     public MainWindow()
     {
-        // Start on the default preset (Pulse — the low beat).
+        // Start on the default preset (Midnight — the deep-beat blend).
         var baked = PresetLibrary.Default.Build(AudioEngine.InternalRate);
         _keystrokes = new KeystrokeController(baked.Map, baked.Voices, _engine);
 
+        // Generative beat bed (default mood: Focused).
+        var spec = SignalsToBeat.Of(DefaultSignals, BeatPreset.Focused);
+        _beat = new BeatSequencer(AudioEngine.InternalRate, spec);
+
         BuildUi();
 
-        // Bed is parked but functional; default off.
-        _engine.SetBed(AmbientBedFactory.BrownNoise(AudioEngine.InternalRate));
+        _engine.SetBedProvider(_beat);
         _engine.MasterVolume = 0.8f;
         _engine.Start();
 
@@ -65,7 +84,7 @@ public sealed class MainWindow : Form
     private void BuildUi()
     {
         Text = "CodeKeys";
-        ClientSize = new Size(440, 246);
+        ClientSize = new Size(440, 290);
         StartPosition = FormStartPosition.CenterScreen;
         Font = new Font("Segoe UI", 9f);
         MaximizeBox = false;
@@ -92,13 +111,26 @@ public sealed class MainWindow : Form
         _presetPicker.SelectedItem = PresetLibrary.Default;
         _presetPicker.SelectedIndexChanged += OnPresetChanged;
 
-        _keysToggle = new CheckBox { Text = "⌨  Keystrokes", Checked = true, AutoSize = true, Left = 16, Top = 96 };
+        _keysToggle = new CheckBox { Text = "⌨  Keystrokes", Checked = true, AutoSize = true, Left = 16, Top = 92 };
         _keysToggle.CheckedChanged += (_, _) => _keystrokes.Enabled = _keysToggle.Checked;
 
-        _bedToggle = new CheckBox { Text = "🔊  Ambient bed (parked)", Checked = false, AutoSize = true, Left = 180, Top = 96 };
+        _bedToggle = new CheckBox { Text = "🥁  Beat", Checked = false, AutoSize = true, Left = 16, Top = 124 };
         _bedToggle.CheckedChanged += (_, _) => _engine.BedEnabled = _bedToggle.Checked;
 
-        var volLabel = new Label { Text = "Master volume", AutoSize = true, Left = 16, Top = 134 };
+        var moodLabel = new Label { Text = "Mood", AutoSize = true, Left = 120, Top = 126 };
+        _moodPicker = new ComboBox
+        {
+            DropDownStyle = ComboBoxStyle.DropDownList,
+            Left = 168,
+            Top = 122,
+            Width = 150
+        };
+        foreach (var mood in Enum.GetValues<BeatPreset>())
+            _moodPicker.Items.Add(mood);
+        _moodPicker.SelectedItem = BeatPreset.Focused;
+        _moodPicker.SelectedIndexChanged += OnMoodChanged;
+
+        var volLabel = new Label { Text = "Master volume", AutoSize = true, Left = 16, Top = 168 };
         _volume = new TrackBar
         {
             Minimum = 0,
@@ -107,7 +139,7 @@ public sealed class MainWindow : Form
             TickFrequency = 25,
             Width = 400,
             Left = 14,
-            Top = 154
+            Top = 188
         };
         _volume.ValueChanged += (_, _) => _engine.MasterVolume = _volume.Value / 100f;
 
@@ -138,6 +170,8 @@ public sealed class MainWindow : Form
         Controls.Add(_presetPicker);
         Controls.Add(_keysToggle);
         Controls.Add(_bedToggle);
+        Controls.Add(moodLabel);
+        Controls.Add(_moodPicker);
         Controls.Add(volLabel);
         Controls.Add(_volume);
         Controls.Add(_status);
@@ -151,6 +185,12 @@ public sealed class MainWindow : Form
         var baked = preset.Build(AudioEngine.InternalRate);
         _keystrokes.SetVoices(baked.Map, baked.Voices);
         _status.Text = "ready";
+    }
+
+    private void OnMoodChanged(object? sender, EventArgs e)
+    {
+        if (_moodPicker.SelectedItem is not BeatPreset mood) return;
+        _beat.SetSpec(SignalsToBeat.Of(DefaultSignals, mood));
     }
 
     protected override void OnFormClosed(FormClosedEventArgs e)

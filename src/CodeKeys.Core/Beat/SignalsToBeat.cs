@@ -27,7 +27,7 @@ public static class SignalsToBeat
     {
         var p = Presets[preset];
         string seedStr = string.IsNullOrEmpty(sig.Text) ? PresetName(preset) : sig.Text;
-        var rand = new Mulberry32(HashSeed(seedStr));
+        var rand = new Prng(Fnv.Hash(seedStr));
 
         // typing speed -> density + tempo bias (fast ~80ms, slow ~500ms)
         double avgGap = sig.AvgGapMs > 0 ? sig.AvgGapMs : 250;
@@ -76,8 +76,8 @@ public static class SignalsToBeat
     /// </summary>
     public static BeatSpec Evolve(BeatSpec spec, int cycle)
     {
-        uint seed = unchecked(HashSeed(PresetName(spec.Preset)) ^ ((uint)cycle * 2654435761u));
-        var rand = new Mulberry32(seed);
+        uint seed = unchecked(Fnv.Hash(PresetName(spec.Preset)) ^ ((uint)cycle * 2654435761u));
+        var rand = new Prng(seed);
         int steps = spec.LoopBars * 16;
 
         double density = Clamp(spec.Density + (rand.Next() - 0.5) * 0.2, 0.15, 1);
@@ -111,7 +111,7 @@ public static class SignalsToBeat
     private static double NormInv(double v, double fast, double slow) =>
         Clamp(1 - (v - fast) / (slow - fast), 0, 1);
 
-    private static string PresetName(BeatPreset p) => p switch
+    internal static string PresetName(BeatPreset p) => p switch
     {
         BeatPreset.Focused => "focused",
         BeatPreset.Relaxed => "relaxed",
@@ -119,34 +119,4 @@ public static class SignalsToBeat
         BeatPreset.Silly => "silly",
         _ => "focused"
     };
-
-    /// <summary>FNV-1a 32-bit, matching the TS <c>hashSeed</c> (UTF-16 code units, Math.imul).</summary>
-    internal static uint HashSeed(string s)
-    {
-        uint h = 2166136261u;
-        foreach (char c in s)
-        {
-            h ^= c;
-            unchecked { h *= 16777619u; }
-        }
-        return h;
-    }
-
-    /// <summary>mulberry32 PRNG, bit-for-bit with the TS original. Returns a double in [0, 1).</summary>
-    internal sealed class Mulberry32
-    {
-        private uint _a;
-        public Mulberry32(uint seed) => _a = seed;
-
-        public double Next()
-        {
-            unchecked
-            {
-                _a += 0x6d2b79f5u;
-                uint t = (_a ^ (_a >> 15)) * (1u | _a);
-                t = (t + ((t ^ (t >> 7)) * (61u | t))) ^ t;
-                return (t ^ (t >> 14)) / 4294967296.0;
-            }
-        }
-    }
 }

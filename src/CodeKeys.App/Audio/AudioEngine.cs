@@ -30,8 +30,7 @@ public sealed class AudioEngine : IDisposable, IVoicePlayer
 
     private IWavePlayer? _output;
 
-    // Ambient bed
-    private LoopSampleProvider? _bedSource;
+    // Bed layer (ambient loop or generative beat)
     private VolumeSampleProvider? _bedVol;
 
     // Polyphony bookkeeping
@@ -41,7 +40,7 @@ public sealed class AudioEngine : IDisposable, IVoicePlayer
 
     // State
     private float _masterVolume = 1.0f;
-    private float _bedLevel = 0.6f;
+    private float _bedLevel = 0.25f; // ≈ −12 dB under the keys
     private bool _keysEnabled = true;
     private bool _bedEnabled = false;
     private bool _muted = false;
@@ -129,19 +128,21 @@ public sealed class AudioEngine : IDisposable, IVoicePlayer
 
     // ---- Ambient bed layer ----
 
-    /// <summary>Install (or replace) the ambient bed loop. Audibility still depends on the toggle.</summary>
-    public void SetBed(SampleBuffer bed)
+    /// <summary>Install (or replace) the bed layer from any provider (e.g. the beat sequencer).</summary>
+    public void SetBedProvider(ISampleProvider provider)
     {
         lock (_gate)
         {
             if (_bedVol != null)
                 _master.RemoveMixerInput(_bedVol);
 
-            _bedSource = new LoopSampleProvider(bed);
-            _bedVol = new VolumeSampleProvider(_bedSource) { Volume = _bedEnabled && !_muted ? _bedLevel : 0f };
+            _bedVol = new VolumeSampleProvider(provider) { Volume = _bedEnabled && !_muted ? _bedLevel : 0f };
             _master.AddMixerInput(_bedVol);
         }
     }
+
+    /// <summary>Install (or replace) the bed from a seamless loop buffer.</summary>
+    public void SetBed(SampleBuffer bed) => SetBedProvider(new LoopSampleProvider(bed));
 
     // ---- Toggles & levels ----
 

@@ -33,11 +33,17 @@ Working app, system-wide. Builds clean, **59/59 unit tests pass**.
   (+ `Evolve`). Pure, deterministic (FNV-1a + mulberry32 bit-for-bit from the TS
   original), 17 tests. `BeatSpec.Scale`/`Root` = single tonal source of truth;
   bridge `SignalsToBeat.ToScale`/`RootMidi` → Music types. Dorian scale added.
-- **Module 1 (capture → Signals)** and **Module 3 (renderer / "BeatEngine")** still
-  to do. **OPEN DECISION:** renderer stack. The TS directive says Tone.js (web),
-  BUT a browser CANNOT capture system-wide keystrokes — that's CodeKeys' whole
-  point — so the renderer must be **native NAudio** to keep the system-wide app.
-  (Tone.js only fits if pivoting to an in-page web typing-toy.) Awaiting Mike.
+- **Module 3 (renderer) DONE — native NAudio** (Mike chose native over Tone.js).
+  `Core/Beat/BeatPattern` (pure, tested) → hit timeline; `App/Audio/BeatSequencer`
+  (ISampleProvider) bakes a scale voice-bank, sample-clocks the pattern, loops +
+  `evolve()` each cycle, live `SetSpec`. Wired as the bed via
+  `AudioEngine.SetBedProvider` at −12 dB (bedLevel 0.25). MainWindow: **Beat
+  toggle + Mood dropdown** (Focused/Relaxed/Burnout/Silly). Brown-noise bed
+  retired. Voices: pad/pulse/marimba/arp/ghost.
+- **Module 1 (live capture → Signals) still TODO.** For now the beat uses a static
+  representative `Signals` per mood. **Privacy:** capture must compute stats only
+  (gaps, counts) and NEVER store typed text — beat seeds from mood, `Signals.Text`
+  stays empty.
 
 ## Open / next (in rough priority)
 - **Tune the low-beat presets by ear** (Mike used "works for now" — revisit when
