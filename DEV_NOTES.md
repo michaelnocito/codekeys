@@ -1,9 +1,11 @@
 # CodeKeys — Dev Notes (resume point)
 
-Last updated: 2026-05-30
+Last updated: 2026-05-31
 
 ## Where we are
-Working app, system-wide. Builds clean, **151/151 unit tests pass**.
+Working app, system-wide. Builds clean, **157/157 unit tests pass**.
+Latest commit: `d568ae2` (soft chime layer). The generative beat is the active
+work area — see the "Adaptive conductor", tuning, and chime sections below.
 
 - **Build/test (PowerShell):** refresh PATH from Machine+User first, then
   `dotnet build CodeKeys.sln -c Debug` / `dotnet test CodeKeys.sln -c Debug`.
@@ -192,4 +194,4 @@ follow my own recommendations unless Mike has overridden them.
   Audio (Synth/Percussion factories, KeyVoiceSet, IVoicePlayer), Presets.
 - `CodeKeys.App` (net8.0-windows, NAudio, WinForms): AudioEngine, GlobalKeyboardHook,
   MainWindow.
-- `CodeKeys.Tests` (xUnit): 151 tests over the Core logic.
+- `CodeKeys.Tests` (xUnit): 157 tests over the Core logic.
