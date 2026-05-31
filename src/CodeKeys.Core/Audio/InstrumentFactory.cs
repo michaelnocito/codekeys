@@ -115,6 +115,49 @@ public static class InstrumentFactory
         return buf;
     }
 
+    /// <summary>
+    /// Tibetan singing bowl: a hammered metal bowl. Built from inharmonic partials with the
+    /// classic ratios (1, 2.76, 5.4, 8.93) — bell-like, not a clean harmonic series — under a
+    /// soft attack and a long resonant decay. Each partial is paired with a slightly detuned
+    /// copy, producing the characteristic shimmering "warble" you hear from a real bowl.
+    /// </summary>
+    public static SampleBuffer CreateSingingBowl(double freq, int sampleRate, double durationSeconds = 1.4, float gain = 0.85f)
+    {
+        if (freq <= 0) throw new ArgumentOutOfRangeException(nameof(freq));
+
+        int count = Math.Max(1, (int)Math.Ceiling(durationSeconds * sampleRate));
+        var s = new float[count];
+
+        // Inharmonic ratios + per-partial amplitudes + decay rates (higher partials fade faster).
+        double[] ratios = { 1.00, 2.76, 5.40, 8.93 };
+        double[] amps   = { 1.00, 0.55, 0.28, 0.14 };
+        double[] decays = { 1.0, 1.5, 2.3, 3.2 };
+        const double attack = 0.06;       // soft, padded strike
+        const double detuneHz = 0.6;      // small detune between paired partials -> shimmer
+
+        for (int i = 0; i < count; i++)
+        {
+            double t = i / (double)sampleRate;
+            double att = t < attack ? t / attack : 1.0;
+            double v = 0;
+            for (int k = 0; k < ratios.Length; k++)
+            {
+                double f = freq * ratios[k];
+                if (f > sampleRate / 2.0) break;
+                double envK = Math.Exp(-t * decays[k] * 0.6);
+                double primary = Math.Sin(2.0 * Math.PI * f * t);
+                double shimmer = Math.Sin(2.0 * Math.PI * (f + detuneHz) * t);
+                v += amps[k] * envK * 0.5 * (primary + shimmer);
+            }
+            s[i] = (float)(v * att * gain);
+        }
+
+        var buf = new SampleBuffer(s, sampleRate);
+        buf.NormalizeInPlace(0.85f);
+        SynthVoiceFactory.FadeOutTail(s, sampleRate, 0.012);
+        return buf;
+    }
+
     /// <summary>Soft wooden mallet: a fundamental plus a quiet 4th-harmonic "bar" partial, fast decay.</summary>
     public static SampleBuffer CreateMarimba(double freq, int sampleRate, double durationSeconds = 0.35, float gain = 0.85f)
     {
