@@ -154,7 +154,14 @@ public sealed class MainWindow : Form
         _keysToggle.CheckedChanged += (_, _) => _keystrokes.Enabled = _keysToggle.Checked;
 
         _bedToggle = new CheckBox { Text = "🥁  Beat", Checked = false, AutoSize = true, Left = 16, Top = 124 };
-        _bedToggle.CheckedChanged += (_, _) => _engine.BedEnabled = _bedToggle.Checked;
+        _bedToggle.CheckedChanged += (_, _) =>
+        {
+            _engine.BedEnabled = _bedToggle.Checked;
+            // The cycle clock advances on the audio thread regardless of mute state, so without a
+            // reset, toggling Beat on minutes after launch would land mid-fall or post-cycle (=
+            // silent). Restart from the build's beginning every time it's enabled.
+            if (_bedToggle.Checked) _beat.Reset();
+        };
 
         // Locked to the Focused mood for now; other beat options hidden to keep this focused.
         // Dev aid: compress the build clock 20× so the arc is auditionable in seconds.

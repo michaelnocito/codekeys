@@ -182,6 +182,24 @@ an **instrument change**, not a behavior change:
   (dormant), so they're easy to bring back if Mike wants.
 - So the active bed = **Pad (warmth) + Pulse/Ghost (drums) + Bass (body)**.
 
+### Silence-when-Beat-on fix (2026-05-31)
+Mike: turned Beat on and heard nothing. Root cause: the audio thread keeps calling
+BeatSequencer.Read() while Beat is muted, so `_sessionSamples` advances unattended.
+If you wait minutes after launch before enabling Beat, the cycle is already
+mid-fall or past CycleSeconds → bed is silent on toggle. Compounded by the new
+softer Sub voice + the very low `_buildGain` floor (0.06) + low `_bedLevel`
+(0.16) all stacking → effectively inaudible. Fixes:
+- **MainWindow now calls `_beat.Reset()` whenever Beat is toggled ON** — cycle
+  restarts from silence reliably.
+- **`_buildGain` floor 0.06 → 0.25** so the bed isn't ducked to inaudible during
+  the early build.
+- **Bar-start kick floor 0.05 → 0.15** so even intensity=0 has a perceptible
+  heartbeat (~1 per loop).
+- **First-kick-ever guarantee** (`cycle == 0 && s == 0`) so Beat-on plays a
+  confirmation hit immediately, regardless of intensity.
+- **`_bedLevel` 0.16 → 0.22** (softer pulse needed a touch more presence).
+167 tests pass.
+
 ### Breathing cycle + Reset button + softer pulse (2026-05-31)
 Mike: (1) after the peak, fall back to silence at a rate **25% faster than the
 rise**, then repeat the pattern; (2) needs a UI **Reset** to restart the beat

@@ -47,7 +47,7 @@ public sealed class BeatSequencer : ISampleProvider
     private int _loopCount;             // loop index → seeds the per-loop back-beat variation
     private double _timeScale = 1.0;    // compresses the build clock for quick auditioning (1 = real time)
     private double _sensitivity = 1.25; // user reactivity multiplier (1 = baseline; default +25%)
-    private float _buildGain = 0.06f;   // additive build's output gain — 0.06 (near-silent) → 1.0
+    private float _buildGain = 0.25f;   // additive build's output gain — 0.25 (quiet, not silent) → 1.0
     private double _noteFill = 0.0;     // note-fill factor passed to BeatPattern — 0 (sparse) → 1 (full)
     private Scheduled[] _schedule = Array.Empty<Scheduled>();
     private long _loopLen = 1;
@@ -75,7 +75,7 @@ public sealed class BeatSequencer : ISampleProvider
             // (Pulse only, near-silent) so the texture starts from the bottom of the curve.
             _spec = Conductor.Step(spec, _userArousal, elapsedSeconds: 0, dtSeconds: 0, lo, hi, _sensitivity);
             double e0 = Conductor.CycleEnvelope(0);
-            _buildGain = (float)(0.06 + 0.94 * e0);
+            _buildGain = (float)(0.25 + 0.75 * e0);
             _noteFill = e0;
             _sessionSamples = 0;
             _loopCount = 0;
@@ -101,7 +101,7 @@ public sealed class BeatSequencer : ISampleProvider
             var (lo, hi) = SignalsToBeat.BpmRange(_spec.Preset);
             _spec = Conductor.Step(_spec, _userArousal, elapsedSeconds: 0, dtSeconds: 0, lo, hi, _sensitivity);
             double e0 = Conductor.CycleEnvelope(0);
-            _buildGain = (float)(0.06 + 0.94 * e0);
+            _buildGain = (float)(0.25 + 0.75 * e0);
             _noteFill = e0;
             BuildSchedule();
             _playhead = 0;
@@ -270,7 +270,7 @@ public sealed class BeatSequencer : ISampleProvider
                     var (lo, hi) = SignalsToBeat.BpmRange(_spec.Preset);
                     _spec = Conductor.Step(_spec, _userArousal, elapsed, dt, lo, hi, _sensitivity);
                     double e = Conductor.CycleEnvelope(elapsed);
-                    _buildGain = (float)(0.06 + 0.94 * e);
+                    _buildGain = (float)(0.25 + 0.75 * e);
                     _noteFill = e;
                     _loopCount++;
                     BuildSchedule(); // reuses the baked bank (scale/root unchanged)

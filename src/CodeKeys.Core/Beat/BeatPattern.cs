@@ -47,13 +47,15 @@ public static class BeatPattern
             {
                 if (s % 4 == 0)
                 {
-                    // Bar-start kicks are gated at low intensity too — that's the "almost not
-                    // noticeable" start (no "dom dom dom dom"). At intensity ≈ 0.01 (first minute),
-                    // bar-start prob ≈ 0.06 → roughly one kick per minute. Climbs smoothly with the
-                    // build. At intensity == 1.0 a short-circuit makes it byte-identical to default.
+                    // Bar-start kicks gated by intensity too — that's the "almost not noticeable"
+                    // start. The floor is bumped (0.15) so even at intensity=0 there's an
+                    // ~1-per-loop chance — a perceptible heartbeat so the user knows the bed is on.
+                    // And the very first beat of cycle 0 is ALWAYS played so Beat-on gives an
+                    // immediate confirmation. At intensity == 1.0 short-circuits byte-identical.
                     bool isBarStart = s % 16 == 0;
-                    double prob = isBarStart ? 0.05 + 0.95 * intensity : intensity;
-                    if (intensity >= 1.0 || rng.Next() < prob)
+                    bool firstHitEver = cycle == 0 && s == 0;
+                    double prob = isBarStart ? 0.15 + 0.85 * intensity : intensity;
+                    if (firstHitEver || intensity >= 1.0 || rng.Next() < prob)
                         hits.Add(new BeatHit(s, BeatLayer.Pulse, root, accentGain, swing));
                 }
                 else if (s % 2 == 0 && rng.Next() < spec.Density * 0.30)
