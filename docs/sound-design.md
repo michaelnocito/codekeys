@@ -64,3 +64,31 @@ preset wiring in `Core/Presets/PresetLibrary.cs`. Add a preset = add one entry t
 Pitches and decay lengths are deliberately conservative and easy to tune by ear —
 see `PresetLibrary.cs`. Adding a preset = add one entry there (and, later, a pack
 folder once the manifest loader lands).
+
+## Mix levels & the flow anchor (2026-05-31)
+
+The app sits *under* a cognitive task, so loudness is a research call, not taste.
+
+- **Keystroke layer = foreground feedback, but moderate.** Too-loud incidental
+  sound raises cognitive load and fatigue; "relatively quiet background sound" is
+  best for cognitive work, and the changing-state/irrelevant-sound effect can
+  disrupt working memory. UI-audio practice is a clear **hierarchy**: the priority
+  feedback (the keystroke you trigger) cuts through, ambient stays subtle. So keys
+  sit ~11 dB **above** the bed but well below "blaring": `AudioEngine._keysLevel`
+  0.55, `_bedLevel` 0.16.
+  ([sonic energy of background music](https://link.springer.com/article/10.1186/s41235-025-00676-9),
+  [auditory distraction review](https://onlinelibrary.wiley.com/doi/abs/10.1002/acp.1134),
+  [UI sound hierarchy / ducking](https://sfxengine.com/blog/best-practices-for-game-ui-sounds))
+- **Resting/flow tempo anchor = ~60–80 BPM.** Research converges on 60–80 BPM for
+  relaxed-focus / "flow" (lo-fi study music lives ~70–90); slower drifts toward
+  boredom, faster toward arousal/stress. CodeKeys' Focused range is 60–72 with the
+  resting anchor (`Conductor.FlowCenter`) at ~66 BPM — in the sweet spot — and the
+  conductor always steers back toward it when the user is over/under-stimulated.
+  We do NOT claim brain-wave entrainment (the "alpha 7–14 Hz" framing is loose);
+  the 60–80 BPM focus range is what the behavioural studies actually support.
+  ([background music & cognition review](https://journals.sagepub.com/doi/10.1177/20592043221134392),
+  [music tempo & focus](https://athenify.io/blog/focus-music-studying-guide))
+- **Future option (not built):** *cognitive-load ducking* — gently lower the whole
+  mix when the arousal estimate is high (user working hard) and allow a touch more
+  presence during calm/breaks. Grounded (dynamic ducking + load-dependent
+  distraction) but subtle to tune; gated on an ear test before adding.

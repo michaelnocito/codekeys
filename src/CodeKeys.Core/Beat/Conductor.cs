@@ -18,7 +18,10 @@ public static class Conductor
     // ---- tunables (expected to be tuned by ear) ----
     // Philosophy: this is a BACKGROUND pulse. It holds steady and only guides when it's really sure
     // the user has drifted — the user is doing another task, so we create space, we don't compete.
-    public const double FlowCenter = 0.5;    // resting arousal the pulse sits at (calm, mid-tempo)
+    // The resting/flow ANCHOR. Maps to ~66 BPM in the Focused range — squarely inside the
+    // 60–80 BPM "relaxed-focus" band the research favours. Over- or under-stimulation is always
+    // steered back toward this point (see MusicalTarget): it's the home the pulse returns to.
+    public const double FlowCenter = 0.5;
     public const double LeadGain   = 0.25;   // how hard we steer back — low, so any guidance is gentle
     public const double Deadband   = 0.18;   // only react once the user is CLEARLY outside this band
     public const double ArousalMin = 0.20;   // never fully dead

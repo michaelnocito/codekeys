@@ -25,6 +25,7 @@ public sealed class AudioEngine : IDisposable, IVoicePlayer
     private readonly object _gate = new();
 
     private readonly MixingSampleProvider _keyMixer;   // transient key voices
+    private readonly VolumeSampleProvider _keysVol;    // keystroke layer level (foreground feedback)
     private readonly MixingSampleProvider _master;     // keys + bed
     private readonly VolumeSampleProvider _masterVol;  // master volume / mute
 
@@ -40,7 +41,10 @@ public sealed class AudioEngine : IDisposable, IVoicePlayer
 
     // State
     private float _masterVolume = 1.0f;
-    private float _bedLevel = 0.16f; // ≈ −16 dB under the keys — sit it well back (background, not foreground)
+    // Keystroke layer = the foreground feedback the user triggers. Research: too-loud incidental
+    // sound raises cognitive load/fatigue, so keep it moderate — clearly above the bed, not blaring.
+    private float _keysLevel = 0.55f;
+    private float _bedLevel = 0.16f; // background bed sits ~11 dB under the keystroke layer (well back)
     private bool _keysEnabled = true;
     private bool _bedEnabled = false;
     private bool _muted = false;
@@ -53,7 +57,8 @@ public sealed class AudioEngine : IDisposable, IVoicePlayer
         _keyMixer.MixerInputEnded += OnVoiceEnded;
 
         _master = new MixingSampleProvider(mono) { ReadFully = true };
-        _master.AddMixerInput(_keyMixer);
+        _keysVol = new VolumeSampleProvider(_keyMixer) { Volume = _keysLevel };
+        _master.AddMixerInput(_keysVol);
 
         _masterVol = new VolumeSampleProvider(_master) { Volume = _masterVolume };
     }
@@ -163,6 +168,13 @@ public sealed class AudioEngine : IDisposable, IVoicePlayer
     {
         get { lock (_gate) return _bedLevel; }
         set { lock (_gate) { _bedLevel = Math.Clamp(value, 0f, 1f); ApplyBedVolume(); } }
+    }
+
+    /// <summary>Keystroke layer level (0..1) — the foreground feedback, kept above the bed.</summary>
+    public float KeysLevel
+    {
+        get { lock (_gate) return _keysLevel; }
+        set { lock (_gate) { _keysLevel = Math.Clamp(value, 0f, 1f); _keysVol.Volume = _keysLevel; } }
     }
 
     /// <summary>Master output volume (0..1).</summary>

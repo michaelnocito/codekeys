@@ -108,8 +108,23 @@ the base tone. Applied:
 - **Larger sample**: `SignalsCollector` window 12s→**30s** + EMA smoothing (0.25)
   on the arousal estimate in `Observe`.
 
+### Levels + flow anchor (2026-05-31, research-grounded)
+Mike: keystrokes too loud; wants a research-backed resting/flow baseline that
+adjustments always return toward. Findings + changes (sources in docs/sound-design.md):
+- **Keystrokes lowered**: new `AudioEngine._keysLevel` 0.55 (was effectively 1.0),
+  via a `VolumeSampleProvider` on the key mixer (+ `KeysLevel` property). Keys now
+  sit ~11 dB over the bed — clear foreground feedback without the fatigue of
+  too-loud incidental sound (raises cognitive load per the research).
+- **Flow anchor**: 60–80 BPM is the research sweet spot for relaxed-focus. Focused
+  is already 60–72 with `FlowCenter`→~66 BPM, and the conductor already homes back
+  toward it → **left tempo unchanged** (changing it would be worse). Documented the
+  anchor in `Conductor.FlowCenter` + sound-design.md. No brain-wave-entrainment claims.
+- **Considered but deferred**: cognitive-load ducking (lower whole mix when working
+  hard). Grounded but subtle — gated on an ear test.
+
 ### NEXT (after Mike's ear test)
-- **Re-tune by ear** the above knobs (all consts in `Conductor.cs` / easy to find).
+- **Re-tune by ear** the above knobs (all consts in `Conductor.cs` / easy to find;
+  `_keysLevel`/`_bedLevel` in `AudioEngine.cs`).
   Does it now feel like background that holds the pulse and only guides when sure?
 - Possible deeper **voice enrichment** from the library (soft Rhodes/bells/richer
   pad) — held back because Mike likes the base tone; pick by ear next.
