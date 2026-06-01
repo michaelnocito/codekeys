@@ -35,7 +35,37 @@ public static class SignalsToBeat
             // Space Clearing — faster pacing (72-84 BPM) so the bowl rings sweep through the room
             // with more motion; 432 Hz bowl ("universe vibration", widely cited for space cleansing).
             [BeatPreset.SpaceClearing] = new(72, 84, BeatScale.MajorPentatonic, "D3", new[] { BeatLayer.Pulse }),
+            // Chakra Sweep — same bed as a single chakra (D3 MajorPentatonic, gentle 60-72 BPM). The
+            // singing bowl is what walks up the seven chakras over the 21-minute journey (see
+            // ChakraSweepStageAt); everything else stays put so only the bowl colour changes.
+            [BeatPreset.ChakraSweep] = new(60, 72, BeatScale.MajorPentatonic, "D3", new[] { BeatLayer.Pulse }),
         };
+
+    // ---- Chakra Sweep: a guided 21-minute walk up the seven chakras ----
+
+    /// <summary>Seconds the bowl dwells on each chakra during the sweep (3 minutes).</summary>
+    public const double ChakraSweepStageSeconds = 180.0;
+
+    /// <summary>The seven chakras in ascending order — the order the sweep's bowl walks through.</summary>
+    public static readonly IReadOnlyList<BeatPreset> ChakraSweepStages = new[]
+    {
+        BeatPreset.Root, BeatPreset.Sacral, BeatPreset.SolarPlexus,
+        BeatPreset.Heart, BeatPreset.Throat, BeatPreset.ThirdEye, BeatPreset.Crown,
+    };
+
+    /// <summary>Total length of the sweep — 7 chakras × 3 min = 21 minutes.</summary>
+    public static double ChakraSweepTotalSeconds => ChakraSweepStageSeconds * ChakraSweepStages.Count;
+
+    /// <summary>
+    /// Which chakra the sweep's bowl is tuned to at the given elapsed time. Each chakra holds for
+    /// <see cref="ChakraSweepStageSeconds"/>; once the journey reaches the top it holds on Crown.
+    /// </summary>
+    public static BeatPreset ChakraSweepStageAt(double elapsedSeconds)
+    {
+        int i = (int)Math.Floor(Math.Max(0, elapsedSeconds) / ChakraSweepStageSeconds);
+        if (i >= ChakraSweepStages.Count) i = ChakraSweepStages.Count - 1;
+        return ChakraSweepStages[i];
+    }
 
     /// <summary>Deterministically derive a beat from typing signals and a mood preset.</summary>
     public static BeatSpec Of(Signals sig, BeatPreset preset)
@@ -140,6 +170,11 @@ public static class SignalsToBeat
         BeatPreset.ThirdEye      => 852.0,
         BeatPreset.Crown         => 963.0,
         BeatPreset.SpaceClearing => 432.0,  // "universe vibration" / healing frequency for space cleansing
+        // The sweep's NOMINAL/opening bowl is the Root (396 Hz); the live bowl frequency walks up the
+        // chakras over the journey and is selected per stage by the renderer (BeatSequencer), not here.
+        // Returning a value (rather than null) keeps the sweep on the "musical bass + bowl from t=0"
+        // code path shared by every chakra template.
+        BeatPreset.ChakraSweep => 396.0,
         _ => null,
     };
 

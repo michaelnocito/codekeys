@@ -46,6 +46,13 @@ public static class Conductor
     public static double FallSeconds => BuildupSeconds / FallSpeedFactor;     // 480 s = 8 min
     public static double CycleSeconds => BuildupSeconds + FallSeconds;        // 1080 s = 18 min
 
+    // Chakra Sweep uses a STEADY envelope instead of the breathing cycle: a gentle ease-in over the
+    // first minute to a held plateau that stays present for the whole 21-minute journey. This keeps
+    // every chakra clearly audible for its 3 minutes (the slow breathing build would leave the early
+    // chakras near-silent and fade the final ones out right as the journey reaches Crown).
+    public const double SweepRiseSeconds = 60.0;   // gentle fade-in to the held bed
+    public const double SweepPlateau     = 0.72;   // steady texture level held across the journey
+
     // session-arc phase boundaries, in seconds
     public const double EstablishUntil   = 120;  // 0–2 min: pad + pulse only, sparse
     public const double StatementUntil   = 360;  // 2–6 min: the melody enters
@@ -133,6 +140,17 @@ public static class Conductor
     }
 
     /// <summary>
+    /// A steady "present" envelope for the Chakra Sweep: ease-in (p²) over <see cref="SweepRiseSeconds"/>
+    /// up to <see cref="SweepPlateau"/>, then hold there indefinitely. No fall — the bed stays present
+    /// for the whole journey so each chakra is clearly heard.
+    /// </summary>
+    public static double SweepEnvelope(double elapsedSeconds)
+    {
+        double p = Clamp(elapsedSeconds / SweepRiseSeconds, 0, 1);
+        return SweepPlateau * (p * p);
+    }
+
+    /// <summary>
     /// Advance the beat one loop. Runs both the additive build (voices enter one at a time,
     /// drives note density) and the arousal thermostat (counter-steers tempo). Preserves tonal
     /// identity (preset/scale/root/loopBars) so the renderer never rebakes; only tempo, density,
@@ -141,12 +159,19 @@ public static class Conductor
     /// <param name="sensitivity">
     /// User reactivity multiplier (1 = baseline). Scales how fast the beat moves toward target.
     /// </param>
+    /// <param name="buildOverride">
+    /// When &ge; 0, use this as the build/texture fraction instead of the breathing
+    /// <see cref="CycleEnvelope"/>. The Chakra Sweep passes <see cref="SweepEnvelope"/> here so it
+    /// rides a steady plateau rather than the rise/fall cycle. Default -1 = breathing cycle (unchanged).
+    /// </param>
     public static BeatSpec Step(BeatSpec current, double userArousal, double elapsedSeconds,
-                                double dtSeconds, int bpmLo, int bpmHi, double sensitivity = 1.0)
+                                double dtSeconds, int bpmLo, int bpmHi, double sensitivity = 1.0,
+                                double buildOverride = -1.0)
     {
         // The breathing cycle: voices come in over the rise, peak briefly, unwind over the fall,
-        // then begin again. `build` is the same fraction for layer thresholds and gating.
-        double build = CycleEnvelope(elapsedSeconds);
+        // then begin again. `build` is the same fraction for layer thresholds and gating. The sweep
+        // overrides it with a steady plateau.
+        double build = buildOverride >= 0 ? buildOverride : CycleEnvelope(elapsedSeconds);
 
         // Read current musical arousal back from where the tempo sits in the preset's range.
         double m = bpmHi > bpmLo ? Clamp((current.Bpm - bpmLo) / (double)(bpmHi - bpmLo), 0, 1) : 0.5;

@@ -6,9 +6,8 @@ to **Bowl Bass Keys**.)
 Last updated: 2026-06-01
 
 ## Where we are
-Working app, system-wide. Builds clean, **177/177 unit tests pass**.
-Latest commit: `99139c5` (propagate Root musical bass to all templates; add
-Space Clearing 432 Hz; UI redesigned to match nocito.github.io).
+Working app, system-wide. Builds clean, **199/199 unit tests pass**.
+Latest commit: Chakra Sweep template (21-min guided journey, bowl walks Root→Crown).
 
 ## CURRENT FOCUS (2026-06-01) — refresh this every session
 The app is **Bowl Bass Keys**. UI redesigned to match
@@ -19,13 +18,15 @@ labels, two thin hr panels. Form is 500×480.
 **Keystrokes**: locked to Midnight (no picker). PresetLibrary.All exposes only
 Midnight; other voicings dormant in code.
 
-**Beat templates (9, exposed in picker)** — all share one musical pattern, only
+**Beat templates (10, exposed in picker)** — all share one musical pattern, only
 the bowl Hz + tempo differ per template:
 - Tibetan Beat (Focused; Dorian D3; 60-72 BPM)
 - Root chakra · 396 Hz (MajorPentatonic D3; 54-66 BPM; **1.25× bass boost**)
 - Sacral · 417, Solar Plexus · 528, Heart · 639, Throat · 741,
   Third Eye · 852, Crown · 963 (MajorPentatonic D3; 60-72 BPM each)
-- **Space Clearing · 432 Hz** (NEW; MajorPentatonic D3; 72-84 BPM faster)
+- **Space Clearing · 432 Hz** (MajorPentatonic D3; 72-84 BPM faster)
+- **Chakra Sweep · 21 min** (NEW; see section below) — the bowl walks UP the seven
+  chakras, 3 min each (Root→Crown), over a steady (non-breathing) bed.
 
 **Musical bass = I-I-V-I** over 4 bars: long-sustain bass on every bar start,
 perfect 5th on bar 2 (V), soft half-bar fill on bar 2 leading into the V.
@@ -57,6 +58,35 @@ auto-sets keys to half. Manual keys-slider moves stay until next beat-slider mov
 
 **Startup defaults** (Mike's test baseline): Beat ON, Root chakra selected, Demo
 OFF, keys slider 11, beat slider 22.
+
+## Chakra Sweep · 21 min (2026-06-01) — NEW guided journey
+A single picker template that walks the singing bowl UP the seven chakras, 3 min
+each (Root→Sacral→SolarPlexus→Heart→Throat→ThirdEye→Crown), 21 min total, then
+holds on Crown. Same bass+bowl bed as a single chakra — only the bowl Hz changes
+over time. Implementation:
+- `BeatPreset.ChakraSweep` (new enum value). Preset range = 60-72 BPM, MajorPentatonic
+  D3 — same calm bed as the chakra templates.
+- `SignalsToBeat`: `ChakraSweepStages` (the 7 chakras in order), `ChakraSweepStageSeconds`
+  (180), `ChakraSweepTotalSeconds` (1260), `ChakraSweepStageAt(elapsed)` → the chakra
+  whose bowl is active at that time (clamps to Crown after 21 min). `ChakraBowlFreq(ChakraSweep)`
+  returns 396 (the opening Root bowl) so the sweep stays on the shared "musical bass +
+  bowl from t=0" code path; the LIVE bowl is selected per-stage by the sequencer.
+- **Steady, NOT breathing**: the sweep uses `Conductor.SweepEnvelope` (ease-in over
+  `SweepRiseSeconds` 60 s to a held `SweepPlateau` 0.72) instead of the 18-min
+  rise/fall `CycleEnvelope`. Reason: the breathing build would leave the early
+  chakras near-silent and fade the late ones out right as you reach Crown. `Conductor.Step`
+  gained a `buildOverride` param (default -1 = breathing, unchanged for all other templates).
+- **Rendering**: `BeatSequencer` pre-bakes all 7 chakra bowls up front; `UpdateSweepBowl(elapsed)`
+  sets `_sweepBowlMidi` per stage at each loop boundary; `BeatPattern.Build` gained a
+  `bowlMidiOverride` param (default -1 = unchanged) used to strike the current stage's bowl.
+  `BeatSequencer.BuildAt(preset, elapsed)` picks Sweep vs breathing envelope.
+- **Demo toggle** compresses the sweep too (elapsed × TimeScale), so the whole 21-min
+  walk auditions in ~63 s with Demo on.
+- 22 new tests (`ChakraSweepTests`). 199/199 pass.
+- ⚠️ **Awaiting Mike's ear test.** Open tweaks if he flags: per-stage Root bass boost
+  (currently NOT applied during the Root stage — bass is uniform across the sweep), the
+  `SweepPlateau` level, `SweepRiseSeconds`, whether a soft crossfade/announce is wanted at
+  each 3-min boundary, and whether the steady-vs-breathing call was right.
 
 ## ⚠️ Next session — open items
 - After Mike ear-tests Root + propagated templates, may need to tweak any of:

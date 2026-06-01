@@ -48,6 +48,7 @@ public sealed class BeatSequencer : ISampleProvider
     private double _timeScale = 1.0;    // compresses the build clock for quick auditioning (1 = real time)
     private double _sensitivity = 1.25; // user reactivity multiplier (1 = baseline; default +25%)
     private double _noteFill = 0.0;     // note-fill factor passed to BeatPattern — 0 (sparse) → 1 (full)
+    private int _sweepBowlMidi = -1;    // Chakra Sweep: the current stage's bowl MIDI (-1 = not sweeping)
     private Scheduled[] _schedule = Array.Empty<Scheduled>();
     private long _loopLen = 1;
     private long _playhead;
@@ -72,10 +73,12 @@ public sealed class BeatSequencer : ISampleProvider
             var (lo, hi) = SignalsToBeat.BpmRange(spec.Preset);
             // dt = 0 + elapsedSeconds = 0 → tempo unchanged; just applies the build's opening
             // (Pulse only, near-silent) so the texture starts from the bottom of the curve.
-            _spec = Conductor.Step(spec, _userArousal, elapsedSeconds: 0, dtSeconds: 0, lo, hi, _sensitivity);
-            _noteFill = Conductor.CycleEnvelope(0);
+            double build0 = BuildAt(spec.Preset, 0);
+            _spec = Conductor.Step(spec, _userArousal, elapsedSeconds: 0, dtSeconds: 0, lo, hi, _sensitivity, build0);
+            _noteFill = build0;
             _sessionSamples = 0;
             _loopCount = 0;
+            UpdateSweepBowl(0);
             BakeBank(_spec);
             BuildSchedule();
             _playhead = 0;
@@ -96,8 +99,10 @@ public sealed class BeatSequencer : ISampleProvider
             _sessionSamples = 0;
             _loopCount = 0;
             var (lo, hi) = SignalsToBeat.BpmRange(_spec.Preset);
-            _spec = Conductor.Step(_spec, _userArousal, elapsedSeconds: 0, dtSeconds: 0, lo, hi, _sensitivity);
-            _noteFill = Conductor.CycleEnvelope(0);
+            double build0 = BuildAt(_spec.Preset, 0);
+            _spec = Conductor.Step(_spec, _userArousal, elapsedSeconds: 0, dtSeconds: 0, lo, hi, _sensitivity, build0);
+            _noteFill = build0;
+            UpdateSweepBowl(0);
             BuildSchedule();
             _playhead = 0;
             _nextIdx = 0;
@@ -174,7 +179,12 @@ public sealed class BeatSequencer : ISampleProvider
         foreach (int deg in new[] { 0, 2, 4 }) Put(BeatLayer.Splash, scale.DegreeToMidi(root, deg));   // rare dark splash
         // Chakra presets tune the bowl to a specific Solfeggio Hz; others use scale degrees.
         var chakraFreq = SignalsToBeat.ChakraBowlFreq(spec.Preset);
-        if (chakraFreq.HasValue)
+        if (spec.Preset == BeatPreset.ChakraSweep)
+            // The sweep walks the bowl up all seven chakras over the journey — pre-bake every one so a
+            // stage change just reschedules (no audio-thread synthesis).
+            foreach (var c in SignalsToBeat.ChakraSweepStages)
+                Put(BeatLayer.Bowl, SignalsToBeat.ChakraBowlMidi(c), SignalsToBeat.ChakraBowlFreq(c));
+        else if (chakraFreq.HasValue)
             Put(BeatLayer.Bowl, SignalsToBeat.ChakraBowlMidi(spec.Preset), chakraFreq.Value);
         else
             foreach (int deg in new[] { 0, 4 }) Put(BeatLayer.Bowl, scale.DegreeToMidi(root, deg));    // Tibetan bowl strikes
@@ -231,9 +241,31 @@ public sealed class BeatSequencer : ISampleProvider
         return buf.Samples;
     }
 
+    /// <summary>
+    /// The build/texture fraction for a preset at a given elapsed time. Chakra Sweep rides a steady
+    /// plateau (<see cref="Conductor.SweepEnvelope"/>) so every chakra is clearly present; every other
+    /// template breathes via the rise/fall <see cref="Conductor.CycleEnvelope"/>.
+    /// </summary>
+    private static double BuildAt(BeatPreset preset, double elapsed) =>
+        preset == BeatPreset.ChakraSweep
+            ? Conductor.SweepEnvelope(elapsed)
+            : Conductor.CycleEnvelope(elapsed);
+
+    /// <summary>
+    /// Chakra Sweep: pick the bowl MIDI for the chakra the journey is currently on (Root→Crown,
+    /// 3 min each). Leaves <see cref="_sweepBowlMidi"/> at -1 for every other template so the bowl
+    /// pitch comes from the spec's own preset as before.
+    /// </summary>
+    private void UpdateSweepBowl(double elapsedSeconds)
+    {
+        _sweepBowlMidi = _spec.Preset == BeatPreset.ChakraSweep
+            ? SignalsToBeat.ChakraBowlMidi(SignalsToBeat.ChakraSweepStageAt(elapsedSeconds))
+            : -1;
+    }
+
     private void BuildSchedule()
     {
-        var hits = BeatPattern.Build(_spec, _loopCount, _noteFill);
+        var hits = BeatPattern.Build(_spec, _loopCount, _noteFill, _sweepBowlMidi);
         int steps = _spec.LoopBars * 16;
         double samplesPerStep = 60.0 / _spec.Bpm / 4.0 * _rate;
         _loopLen = Math.Max(1, (long)(steps * samplesPerStep));
@@ -292,8 +324,10 @@ public sealed class BeatSequencer : ISampleProvider
                     double elapsed = _sessionSamples / (double)_rate * _timeScale;
                     double dt = _loopLen / (double)_rate;
                     var (lo, hi) = SignalsToBeat.BpmRange(_spec.Preset);
-                    _spec = Conductor.Step(_spec, _userArousal, elapsed, dt, lo, hi, _sensitivity);
-                    _noteFill = Conductor.CycleEnvelope(elapsed);
+                    double build = BuildAt(_spec.Preset, elapsed);
+                    _spec = Conductor.Step(_spec, _userArousal, elapsed, dt, lo, hi, _sensitivity, build);
+                    _noteFill = build;
+                    UpdateSweepBowl(elapsed); // Chakra Sweep: walk the bowl up the chakras over time
                     _loopCount++;
                     BuildSchedule(); // reuses the baked bank (scale/root unchanged)
                 }

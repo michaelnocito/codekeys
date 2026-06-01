@@ -11,7 +11,10 @@ public enum BeatPreset
     // Chakra tunings — same low bass hum + a singing bowl at the Solfeggio frequency.
     Root, Sacral, SolarPlexus, Heart, Throat, ThirdEye, Crown,
     // Space Clearing — bowl tuned to 432 Hz ("universe vibration"); faster pacing for sweeping energy.
-    SpaceClearing
+    SpaceClearing,
+    // Chakra Sweep — a guided 21-minute journey: the bowl walks UP the seven chakras, 3 min each
+    // (Root→Crown), over a steady bass+bowl bed. The bowl frequency is time-driven, not fixed.
+    ChakraSweep
 }
 
 /// <summary>The scales a beat can use. This is the tonal source of truth key-sounds must read.</summary>

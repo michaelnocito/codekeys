@@ -26,8 +26,12 @@ public static class BeatPattern
     /// <paramref name="intensity"/> (0..1, default 1 = full) is the note-fill factor used by
     /// "buildup" mode: below 1 it thins the kick + melody so the texture starts sparse and fills in.
     /// At 1.0 it is a no-op (and consumes no randomness), so normal playback is unchanged.
+    /// <paramref name="bowlMidiOverride"/> (default -1 = none) forces the Bowl strike to a specific
+    /// pre-baked MIDI — the Chakra Sweep uses it to walk the bowl up the chakras over time without
+    /// changing the rest of the bed. Ignored when negative, so other templates are unaffected.
     /// </summary>
-    public static IReadOnlyList<BeatHit> Build(BeatSpec spec, int cycle = 0, double intensity = 1.0)
+    public static IReadOnlyList<BeatHit> Build(BeatSpec spec, int cycle = 0, double intensity = 1.0,
+                                               int bowlMidiOverride = -1)
     {
         int steps = spec.LoopBars * 16;
         var scale = SignalsToBeat.ToScale(spec.Scale);
@@ -199,7 +203,9 @@ public static class BeatPattern
             {
                 var chakraFreq = SignalsToBeat.ChakraBowlFreq(spec.Preset);
                 int primaryMidi;
-                if (chakraFreq.HasValue)
+                if (bowlMidiOverride >= 0)
+                    primaryMidi = bowlMidiOverride; // Chakra Sweep: the current stage's chakra bowl
+                else if (chakraFreq.HasValue)
                     primaryMidi = SignalsToBeat.ChakraBowlMidi(spec.Preset);
                 else
                 {

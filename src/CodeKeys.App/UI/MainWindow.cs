@@ -252,6 +252,7 @@ public sealed class MainWindow : Form
             new ChakraOption(BeatPreset.ThirdEye,      "Third Eye chakra  ·  852 Hz"),
             new ChakraOption(BeatPreset.Crown,         "Crown chakra  ·  963 Hz"),
             new ChakraOption(BeatPreset.SpaceClearing, "Space Clearing  ·  432 Hz"),
+            new ChakraOption(BeatPreset.ChakraSweep,   "Chakra Sweep  ·  21 min  ·  Root → Crown"),
         });
         _chakraPicker.SelectedIndex = 1;
         _chakraPicker.SelectedIndexChanged += OnChakraChanged;
