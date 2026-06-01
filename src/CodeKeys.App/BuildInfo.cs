@@ -23,5 +23,5 @@ public static class BuildInfo
         }
     }
 
-    public static string Full => $"CodeKeys v{Version} · build {BuildStamp}";
+    public static string Full => $"Bowl Bass Keys v{Version} · build {BuildStamp}";
 }

@@ -160,7 +160,9 @@ public sealed class BeatSequencer : ISampleProvider
         foreach (int deg in new[] { 0, 2, 4 }) Put(BeatLayer.Pad, scale.DegreeToMidi(root, deg));      // chord (unused)
         // Bake TWO Bass variants per pitch — a mid-length default (~2s) and a long lingering one
         // (~3.6s). The pattern picks among them for the playful "who leads how long" exchange.
-        foreach (int deg in new[] { 0, 4 })
+        // Degrees: 0 (root), 3 (perfect 5th in MajorPentatonic / 4th in Dorian), 4 (6th in
+        // MajorPentatonic / 5th in Dorian). Cover all three so the pattern can pick safely.
+        foreach (int deg in new[] { 0, 3, 4 })
         {
             int bMidi = scale.DegreeToMidi(root - 12, deg);
             double bFreq = NoteUtil.MidiToFrequency(bMidi);

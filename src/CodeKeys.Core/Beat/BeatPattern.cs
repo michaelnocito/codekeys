@@ -84,14 +84,14 @@ public static class BeatPattern
 
                 if (isRootChakra)
                 {
-                    // Root chakra "musical" bass: long sustained bass on every bar start, with a
-                    // I-I-V-I progression over 4 bars (same tones — root and fifth — but with a
-                    // small harmonic shift to bar 2 for musicality). Plus a soft half-bar fill on
+                    // Root chakra "musical" bass: long sustained bass on every bar start, I-I-V-I
+                    // over 4 bars (root and PERFECT FIFTH — in MajorPentatonic the perfect 5th is
+                    // at degree 3, not degree 4 which is the 6th). Plus a soft half-bar fill on
                     // bar 2 to lead into the harmonic motion. Sparse, dignified, grounding.
                     if (s % 16 == 0)
                     {
                         int barIdx = s / 16;
-                        int deg = (spec.LoopBars >= 4 && barIdx % 4 == 2) ? 4 : 0; // fifth only on bar 2 of 4-bar loops
+                        int deg = (spec.LoopBars >= 4 && barIdx % 4 == 2) ? 3 : 0; // perfect 5th on bar 2 of 4-bar loops
                         int baseMidi = scale.DegreeToMidi(root - 12, deg);
                         int midi = baseMidi + LongBassOffset;
                         double gain = accents.Contains(s) ? 0.75 : 0.65; // boosted because Root = bass-focused
@@ -100,7 +100,7 @@ public static class BeatPattern
                     else if (s == 40 && spec.LoopBars >= 4)
                     {
                         // Soft half-bar fill on bar 2 (the harmonic-motion bar) — adds movement.
-                        int midi = scale.DegreeToMidi(root - 12, 4); // fifth
+                        int midi = scale.DegreeToMidi(root - 12, 3); // perfect 5th
                         hits.Add(new BeatHit(s, BeatLayer.Bass, midi, 0.40, swing));
                     }
                 }
