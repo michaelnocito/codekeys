@@ -190,7 +190,6 @@ public sealed class MainWindow : Form
         };
         _chakraPicker.Items.AddRange(new object[]
         {
-            new ChakraOption(BeatPreset.Focused,       "Tibetan Beat"),
             new ChakraOption(BeatPreset.Root,          "Root chakra  ·  396 Hz"),
             new ChakraOption(BeatPreset.Sacral,        "Sacral chakra  ·  417 Hz"),
             new ChakraOption(BeatPreset.SolarPlexus,   "Solar Plexus chakra  ·  528 Hz"),
@@ -201,7 +200,7 @@ public sealed class MainWindow : Form
             new ChakraOption(BeatPreset.SpaceClearing, "Space Clearing  ·  432 Hz"),
             new ChakraOption(BeatPreset.ChakraSweep,   "Chakra Sweep  ·  21 min  ·  Root → Crown"),
         });
-        _chakraPicker.SelectedIndex = 1;
+        _chakraPicker.SelectedIndex = 0; // Root chakra (default)
         _chakraPicker.SelectedIndexChanged += OnChakraChanged;
         template.Controls.Add(_chakraPicker);
 

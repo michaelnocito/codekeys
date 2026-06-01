@@ -7,7 +7,31 @@ Last updated: 2026-06-01
 
 ## Where we are
 Working app, system-wide. Builds clean, **207/207 unit tests pass**.
-Latest commit: Living events (PlantWave-style accent channel) + phone-app UI redesign.
+Latest commit: removed Tibetan Beat template; security/compliance audit (CLEAN) +
+README refresh; game-flow + launch handoffs in docs/.
+
+## Tibetan Beat removed + compliance pass (2026-06-01)
+- **Tibetan Beat template removed** per Mike — gone from the picker and all user/marketing
+  docs. Now **9 selectable templates** (7 chakras + Space Clearing + Chakra Sweep). The
+  internal `BeatPreset.Focused` enum REMAINS as the engine's neutral default (used by the
+  conductor + many tests, and by `BeatPattern.isMusicalBeat` / `Conductor.isShownBeat`); it is
+  simply never exposed in the UI. "Tibetan singing bowl" stays as the instrument name. Picker
+  default is now Root (index 0).
+- **Security/compliance audit (read-only, full repo): CLEAN, zero concerns.** Confirmed the
+  hook is read-only (passes keys through via CallNextHookEx — cannot control other apps), chars
+  are never captured (`SignalsCollector.Snapshot().Text` always ""; `CaptureTests`), no disk
+  writes, no network (only NAudio dep), no injection (no SendInput/clipboard), no autostart/
+  persistence. Wrote **`docs/COMPLIANCE.md`** (audit table + distribution checklist: code-sign,
+  VirusTotal + Defender submission, SHA-256, no admin elevation).
+- **README refreshed** — was stale (claimed a tray, swappable packs, and `%APPDATA%\CodeKeys\packs\`
+  writes that don't exist — a mismatch a security reviewer would flag). Now accurate to the build
+  and privacy-forward (added: never captures chars / no disk / no network / read-only hook / no
+  autostart / 30 s rolling RAM buffer).
+- **Two handoff docs added** for other workstreams:
+  - `docs/LAUNCH_BRIEF.md` — advert handoff (features + science + speaker rec). Updated to 9 templates.
+  - `docs/GAME_FLOW_HANDOFF.md` — port the adaptive-music core (`Core/Beat/*`, pure C#) into a
+    Godot controller game; re-tune calm→energetic for fast "game flow" (higher tempo bands, fast
+    onset, ride-along harder, stems/layering, beat-synced feedback + haptics, on-beat rewards).
 
 ## CURRENT FOCUS (2026-06-01) — refresh this every session
 The app is **Bowl Bass Keys**. UI redesigned to match

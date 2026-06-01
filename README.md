@@ -1,51 +1,79 @@
-# CodeKeys
+# Bowl Bass Keys
 
-A tiny Windows tray app that plays sound on **every keystroke, system-wide** —
-in VS Code, Slack, the Start menu, a login box, anywhere — plus a separate
-continuous **ambient focus bed** running underneath. Two independent audio
-layers (keystrokes / ambient), each toggleable on its own. Built for low-latency,
-near-zero idle footprint. C# / .NET + NAudio, shipped as a self-contained
-single-file `.exe`.
+*(The git repo and executable are named `codekeys` for history continuity; the app is
+**Bowl Bass Keys**.)*
 
-Sound aesthetics come in **swappable packs** you pick from the tray.
+A small Windows desktop app that plays a sound on **every keystroke, system-wide** — in VS
+Code, Slack, a browser, anywhere — and, underneath, generates a calm **bed of deep bass +
+Tibetan singing bowls** that gently responds to *how* you type (your speed, rhythm, and
+pauses) to help keep you in flow. Built for low latency and near-zero idle footprint.
+C# / .NET 8 + NAudio. All sound is **procedurally synthesized** — there are no audio asset
+files.
 
 ---
 
 ## ⚠️ Privacy — read this
 
-CodeKeys installs a **global low-level keyboard hook**. From a security
-standpoint, **that is the same mechanism a keylogger uses.**
+Bowl Bass Keys installs a **global low-level keyboard hook** (`WH_KEYBOARD_LL`). From a
+security standpoint, **that is the same mechanism a keylogger uses** — so here is exactly what
+it does and does not do. The source is public so you can verify every line.
 
-What CodeKeys does and does not do:
+What it **does**:
+- ✅ Inspects each key press **locally, in memory, only** — long enough to (a) pick which
+  sound to play and (b) note its *timing* and *category* (letter / number / punctuation /
+  backspace / etc.) plus a single upper/lower-case bit, so the music can react to your rhythm.
 
-- ✅ It inspects each key press **locally, in memory, only** to decide which
-  sound to play.
-- ❌ It **never stores** your keystrokes.
-- ❌ It **never transmits** anything. **The app makes no network connections at all.**
-- ⚠️ It **will** make sound while you type passwords and into login fields —
-  that's expected. Nothing is logged; use the **global mute hotkey** (panic kill)
-  whenever you want silence.
+What it **does not** do:
+- ❌ It **never records the characters you type.** The captured text is always empty — only
+  timing and key-category counts are kept. (See `SignalsCollector.Snapshot()`; verified by
+  `CaptureTests`.)
+- ❌ It **never writes keystrokes (or anything else) to disk.** No logs, no files, no registry,
+  no `%APPDATA%`. The only file it ever reads is its own `.exe` (to show a build date).
+- ❌ It **never transmits anything.** The app makes **no network connections at all** — there
+  are no networking libraries in the project.
+- ❌ It **does not inject or alter input.** The hook is read-only: every key is passed straight
+  through unchanged (`CallNextHookEx`). It cannot type for you, control other apps, or be used
+  to drive another program.
+- ❌ It **does not persist or auto-start.** No registry `Run` key, no startup folder, no
+  service, no scheduled task. Close it and it's gone; reboot and it does not come back unless
+  you launch it.
 
-The source is here so you can verify all of the above yourself.
+How the data is held:
+- Typing telemetry lives in a **rolling ~30-second buffer in RAM only**, continuously evicted.
+  Nothing is ever serialized or saved.
+- It **will** make sound while you type passwords or into login fields — that's expected, and
+  nothing is logged. Turn off the **Keystrokes** toggle (or close the app) whenever you want
+  silence.
 
 ---
 
+## What it does
+
+- **Keystrokes** — a sound on every key, system-wide (the "Midnight" voicing: deep low thumps,
+  mid taps, a warm top end, a soft snare on Enter).
+- **Beat** — a generative bed of deep bass + singing bowls that adapts to your typing via an
+  adaptive "conductor" (see `DEV_NOTES.md` / `docs/sound-design.md`). Templates: the seven
+  chakra tunings, a 432 Hz Space Clearing mode, and a 21-minute guided Chakra Sweep.
+- **Living events** (optional) — soft chimes/splashes that fire on bursts and settles in your
+  typing flow.
+
+Each layer is independently toggleable. Overall volume follows Windows (the app is its own
+entry in the system volume mixer).
+
+> **Tip:** play it through a speaker — even a small Bluetooth one. The deep bass is meant to be
+> *felt*. Headphones work well too; built-in laptop speakers miss the low end.
+
 ## Status
 
-Early development. See [ROADMAP.md](ROADMAP.md) for the build order.
+Active development. Builds clean; 207 unit tests passing. See [ROADMAP.md](ROADMAP.md) and
+[DEV_NOTES.md](DEV_NOTES.md).
 
 ## Stack
 
-- **C# / .NET**, published self-contained single-file `.exe` (double-click to run,
-  no toolchain needed).
-- **Audio:** NAudio. All pack samples decoded into RAM at pack-load; played
-  through a polyphonic mixer. Target latency under ~30ms (WASAPI shared mode),
-  hard ceiling 50ms.
-- **Keyboard hook:** native `WH_KEYBOARD_LL` global hook.
-- **Tray:** standard Windows tray app.
-
-## Packs
-
-A pack is a folder in `%APPDATA%\CodeKeys\packs\` with a `manifest.json` plus its
-audio assets. Add a pack by cloning a folder, dropping in assets, and editing the
-manifest — no recompile. Schema is documented in [docs/packs.md](docs/packs.md).
+- **C# / .NET 8**, intended to publish as a self-contained single-file `.exe` (double-click to
+  run, no toolchain needed, no admin rights required).
+- **Audio:** NAudio, WASAPI **shared** mode (never monopolizes your audio device). Fully
+  procedural synthesis, polyphonic mixer.
+- **Keyboard hook:** native `WH_KEYBOARD_LL` global hook, read-only.
+- **Compliance:** see [docs/COMPLIANCE.md](docs/COMPLIANCE.md) for the security audit and the
+  safe-distribution checklist (code signing, VirusTotal/Defender submission).

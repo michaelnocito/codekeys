@@ -206,9 +206,9 @@ public static class Conductor
             .ToList();
         if (!layers.Contains(BeatLayer.Pulse)) layers.Add(BeatLayer.Pulse); // gentle accent
         if (!layers.Contains(BeatLayer.Bass))  layers.Add(BeatLayer.Bass);  // the continuous hum
-        // Bowl Bass Keys' two beat modes both have bowls from the start: Tibetan Beat (Focused, the
-        // unspecific bowl + bass mode) AND each of the seven chakra tunings. Other moods (Relaxed /
-        // Burnout / Silly — dormant) keep their original build-gated bowl entry.
+        // Every selectable template (the chakra tunings, Space Clearing, Chakra Sweep) has bowls
+        // from the start. The internal `Focused` base mode keeps the same behaviour for the engine
+        // and tests. Other moods (Relaxed / Burnout / Silly — dormant) keep their build-gated bowl entry.
         bool isChakra = SignalsToBeat.ChakraBowlFreq(current.Preset).HasValue;
         bool isShownBeat = isChakra || current.Preset == BeatPreset.Focused;
         if (isShownBeat) layers.Add(BeatLayer.Bowl);

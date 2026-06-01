@@ -84,8 +84,9 @@ public static class BeatPattern
             //   pattern 4: long-bass on bar starts, mid-bass between        (leader + chorus)
             if (Has(BeatLayer.Bass))
             {
-                // ALL bowl-bearing templates (Tibetan Beat / chakras / Space Clearing) use the same
-                // musical I-I-V-I bass: long sustained bass on every bar start, with the perfect 5th
+                // ALL bowl-bearing templates (chakras / Space Clearing / Sweep, + the internal base
+                // mode) use the same musical I-I-V-I bass: long sustained bass on every bar start,
+                // with the perfect 5th
                 // on bar 2 for a grounded harmonic motion. Perfect 5th computed by interval (rootMidi
                 // + 7) so it works in any scale (Dorian / MajorPentatonic) without scale-degree
                 // gotchas. Root chakra gets a 1.25× gain boost (bass-focused grounding).

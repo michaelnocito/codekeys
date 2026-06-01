@@ -12,8 +12,8 @@ Prepared 2026-06-01. Build: clean, 207/207 unit tests passing.
 **Bowl Bass Keys turns your typing into a calm, living soundscape.** Every keystroke plays a
 warm sound, and underneath, a generative bed of **deep bass + Tibetan singing bowls** quietly
 responds to *how* you type — your speed, rhythm, and pauses — to gently keep you in flow. It
-never sees *what* you type. Choose a Tibetan beat, a chakra tuning, a 432 Hz space-clearing
-mode, or a 21-minute guided chakra journey.
+never sees *what* you type. Choose a chakra tuning, a 432 Hz space-clearing mode, or a
+21-minute guided chakra journey.
 
 **One thing the ad must say:** *play it through a speaker — the bass is the point.* A normal
 portable Bluetooth speaker is ideal; headphones are a fine alternative; laptop speakers miss
@@ -45,12 +45,11 @@ the low end that makes it work.
   and Enter is a soft snare. Pitch zones follow the physical location of the key.
 - Procedurally synthesized (no audio sample files), click-free envelopes.
 
-### 2.2 Generative beat bed ("Beat") — 10 selectable templates
+### 2.2 Generative beat bed ("Beat") — 9 selectable templates
 All share one musical foundation (see §2.3); only the singing-bowl frequency and tempo differ.
 
 | Template | Bowl frequency | Tempo | Notes |
 |---|---|---|---|
-| **Tibetan Beat** | scale-tone bowls | 60–72 BPM | the "unspecific" bowl + bass mode (Dorian) |
 | **Root chakra** | 396 Hz | 54–66 BPM | slower + a **1.25× bass boost** (grounding) |
 | **Sacral chakra** | 417 Hz | 60–72 BPM | |
 | **Solar Plexus chakra** | 528 Hz | 60–72 BPM | |
@@ -102,7 +101,7 @@ The bed isn't a loop — it's *generated and gently steered in real time* to kee
 - **Phone-app-clean UI** in the michaelnocito.github.io look: a portrait single column of soft
   rounded cards on white, charcoal text, one blue accent, generous whitespace. iOS-style
   toggles and flat sliders.
-- Sections: **Sound** (Keystrokes / Beat on-off), **Beat Template** (the 10-template picker),
+- Sections: **Sound** (Keystrokes / Beat on-off), **Beat Template** (the 9-template picker),
   **Mix** (Keystrokes + Beat level sliders; keys auto-track at half the beat level), **Flow**
   (Living events + Demo toggles), a **Restart beat** button.
 - **Volume follows Windows** (the app is its own entry in the system volume mixer).
