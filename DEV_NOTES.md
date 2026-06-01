@@ -1,11 +1,75 @@
-# CodeKeys — Dev Notes (resume point)
+# Bowl Bass Keys — Dev Notes (resume point)
 
-Last updated: 2026-05-31
+(Repo is still named `codekeys` for git history continuity; the app rebranded
+to **Bowl Bass Keys**.)
+
+Last updated: 2026-06-01
 
 ## Where we are
-Working app, system-wide. Builds clean, **157/157 unit tests pass**.
-Latest commit: `d568ae2` (soft chime layer). The generative beat is the active
-work area — see the "Adaptive conductor", tuning, and chime sections below.
+Working app, system-wide. Builds clean, **177/177 unit tests pass**.
+Latest commit: `99139c5` (propagate Root musical bass to all templates; add
+Space Clearing 432 Hz; UI redesigned to match nocito.github.io).
+
+## CURRENT FOCUS (2026-06-01) — refresh this every session
+The app is **Bowl Bass Keys**. UI redesigned to match
+[michaelnocito.github.io](https://michaelnocito.github.io) — white BG, charcoal
+text, generous whitespace, Segoe UI Semibold title, small uppercase gray section
+labels, two thin hr panels. Form is 500×480.
+
+**Keystrokes**: locked to Midnight (no picker). PresetLibrary.All exposes only
+Midnight; other voicings dormant in code.
+
+**Beat templates (9, exposed in picker)** — all share one musical pattern, only
+the bowl Hz + tempo differ per template:
+- Tibetan Beat (Focused; Dorian D3; 60-72 BPM)
+- Root chakra · 396 Hz (MajorPentatonic D3; 54-66 BPM; **1.25× bass boost**)
+- Sacral · 417, Solar Plexus · 528, Heart · 639, Throat · 741,
+  Third Eye · 852, Crown · 963 (MajorPentatonic D3; 60-72 BPM each)
+- **Space Clearing · 432 Hz** (NEW; MajorPentatonic D3; 72-84 BPM faster)
+
+**Musical bass = I-I-V-I** over 4 bars: long-sustain bass on every bar start,
+perfect 5th on bar 2 (V), soft half-bar fill on bar 2 leading into the V.
+Perfect 5th is computed by interval (rootMidi + 7) so it works in any scale
+(Dorian's perfect 5th = degree 4, MajorPentatonic's perfect 5th = degree 3 —
+the interval-based approach sidesteps the scale-degree gotcha that bit us once).
+
+**Bowls = quiet background appearances** (Mike: "bowls are background, bass is
+the star"):
+- Voice: 10 s buffer; ADSR with sustain plateau (1.5 s ascend, 3.5 s sustain,
+  ~5 s slow descend). Warble nearly off (detuneHz 0.08, shimmer 0.10, primary
+  0.90). decayMultiplier 0.04. FadeOutTail 300 ms.
+- Pattern: spacing = max(1, round(3 − 2.5 × density)) loops between strikes —
+  calm = every 3 loops, medium = 2, dense = every loop.
+- Hit gain 0.05 (primary), normalize 0.85 — bowl total summed signal sits well
+  below the bass even with overlap.
+
+**Conductor = RIDE-ALONG** (replaced the older counter-active design). Three zones:
+- Calm (arousal ≤ FlowCenter 0.5): hold at FlowCenter, don't slow them.
+- Flow (0.5 .. TenseThreshold 0.75): RIDE ALONG at RideGain 0.40 of deviation —
+  beat rises with user but stays calmer.
+- Tense (> 0.75): counter-active at 2 × LeadGain 0.40 of overage — only here
+  does the beat actively bring the user back down.
+All gated by the build envelope + responsiveness ramp, so during the first few
+minutes adaptation barely applies.
+
+**Audio levels**: `_keysLevel` 0.11, `_bedLevel` 0.22. Moving the beat slider
+auto-sets keys to half. Manual keys-slider moves stay until next beat-slider move.
+
+**Startup defaults** (Mike's test baseline): Beat ON, Root chakra selected, Demo
+OFF, keys slider 11, beat slider 22.
+
+## ⚠️ Next session — open items
+- After Mike ear-tests Root + propagated templates, may need to tweak any of:
+  bowl spacing const (`3.0 − 2.5 × density`), Root bass boost (1.25×), per-chakra
+  BPM (currently all 60-72 except Root 54-66 and Space Clearing 72-84), V-chord
+  cadence (currently only on bar 2 of 4-bar loops).
+- The 432 Hz bowl in Space Clearing is harmonically very close to (but slightly
+  flat of) A4 = 6th harmonic of D2 bass — may sound subtly out of tune. If Mike
+  flags it, retune Space Clearing bass root to ~72 Hz for exact harmonic, or use
+  a different scale.
+- App rename in process: window title + heading + `BuildInfo.Full` all say
+  "Bowl Bass Keys"; repo and .exe filename still `CodeKeys` (intentional, for
+  git history continuity — don't rename without explicit ask).
 
 - **Build/test (PowerShell):** refresh PATH from Machine+User first, then
   `dotnet build CodeKeys.sln -c Debug` / `dotnet test CodeKeys.sln -c Debug`.
