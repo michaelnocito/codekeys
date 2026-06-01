@@ -6,8 +6,8 @@ to **Bowl Bass Keys**.)
 Last updated: 2026-06-01
 
 ## Where we are
-Working app, system-wide. Builds clean, **199/199 unit tests pass**.
-Latest commit: Chakra Sweep template (21-min guided journey, bowl walks Root→Crown).
+Working app, system-wide. Builds clean, **207/207 unit tests pass**.
+Latest commit: Living events (PlantWave-style accent channel) + phone-app UI redesign.
 
 ## CURRENT FOCUS (2026-06-01) — refresh this every session
 The app is **Bowl Bass Keys**. UI redesigned to match
@@ -58,6 +58,36 @@ auto-sets keys to half. Manual keys-slider moves stay until next beat-slider mov
 
 **Startup defaults** (Mike's test baseline): Beat ON, Root chakra selected, Demo
 OFF, keys slider 11, beat slider 22.
+
+## Living events + phone-app UI redesign (2026-06-01)
+Two changes in one pass — a new optional sound channel + a full UI cleanup.
+
+**Living events (toggle, OFF by default)** — inspired by deep-research into PlantWave /
+the MIDI Sprout (patent US10,909,956 B2 + open-source firmware). Their insight: notes
+come from CHANGE-events (delta > stddev×threshold, self-calibrating), and extra effects/
+voices come from the signal's rate-of-change. We adopted that as an optional accent channel:
+- `Core/Beat/LivingEvents.cs` — pure `LivingEventDetector`. Watches the arousal stream;
+  each reading it tests the latest CHANGE against the std-dev of recent changes (Window 8,
+  Warmup 4, Threshold 1.6, MinDelta 0.06 floor, Cooldown 2). Fires `Rising` (flow burst) or
+  `Falling` (settle/correction). Self-calibrates per typist; no fixed probability. 8 tests.
+- `BeatSequencer`: `LivingEventsEnabled` property; `Observe` pushes the RAW reading to the
+  detector and, on a fire, **injects a one-shot voice immediately** into the live mix (an
+  auditory icon, not loop-quantized): Rising → soft Chime (root+24, gain 0.16), Falling →
+  Splash (root, gain 0.22). Pitches baked in `BakeBank` (`_eventChimeMidi`/`_eventSplashMidi`).
+  Detector reset on SetSpec/Reset/toggle. **Bed is byte-identical when the toggle is off.**
+- ⚠️ Mike's ear test pending: tune Threshold / Cooldown / MinDelta / gains; decide if the
+  rising accent should be a bowl rather than a chime (chimes were earlier flagged as focus-
+  pulling, but here they're rare, opt-in one-shots).
+
+**UI redesign — phone-app standards, nocito.github.io look.** Portrait single-column
+(404×772) of soft rounded "cards" on white, charcoal text, one blue accent. New reusable
+custom controls under `App/UI/Controls/`: `ToggleSwitch` (iOS-style), `FlatSlider` (thin
+track + round knob, replaces the dated TrackBar), `CardPanel` (rounded hairline-border card).
+Sections: SOUND (Keystrokes/Beat toggles), BEAT TEMPLATE (the 10-item picker), MIX (two
+sliders, keys auto-track at ½ beat), FLOW (Living events + Demo toggles), Restart-beat button,
+footer (volume hint + build stamp). Verified visually by screenshotting the running window
+(DPI-aware capture via SetThreadDpiAwarenessContext(-4)). Removed the dormant preset-picker
+combo + OnPresetChanged.
 
 ## Chakra Sweep · 21 min (2026-06-01) — NEW guided journey
 A single picker template that walks the singing bowl UP the seven chakras, 3 min

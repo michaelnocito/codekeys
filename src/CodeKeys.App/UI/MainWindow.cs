@@ -2,16 +2,17 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using CodeKeys.App.Audio;
 using CodeKeys.App.Input;
+using CodeKeys.App.UI.Controls;
 using CodeKeys.Core.Beat;
 using CodeKeys.Core.Input;
-using CodeKeys.Core.Presets;
 
 namespace CodeKeys.App.UI;
 
 /// <summary>
-/// CodeKeys control panel. Keystroke sound comes from the system-wide hook (type in any
-/// app), and an optional generative beat plays underneath at −12 dB, locked to the same
-/// scale so it never clashes. This window can sit minimized.
+/// Bowl Bass Keys control panel. Keystroke sound comes from the system-wide hook (type in any app),
+/// and an optional generative bed of singing bowls + deep bass plays underneath, locked to the same
+/// scale so it never clashes. Styled like a phone settings screen — a single column of soft cards on
+/// white, matching michaelnocito.github.io (charcoal text, one blue accent, generous whitespace).
 /// </summary>
 public sealed class MainWindow : Form
 {
@@ -27,13 +28,26 @@ public sealed class MainWindow : Form
     private System.Windows.Forms.Timer _signalTimer = null!;
     private bool _shiftDown;
 
-    private CheckBox _keysToggle = null!;
-    private CheckBox _bedToggle = null!;
-    private Label _status = null!;
-    private ComboBox _presetPicker = null!;
+    private ToggleSwitch _keysToggle = null!;
+    private ToggleSwitch _bedToggle = null!;
+    private ToggleSwitch _livingToggle = null!;
+    private ToggleSwitch _demoToggle = null!;
+    private FlatSlider _keysVol = null!;
+    private FlatSlider _beatVol = null!;
     private ComboBox _chakraPicker = null!;
+    private Label _status = null!;
 
-    // Representative typing signals. NOTE: Text is intentionally left empty — CodeKeys never
+    // ---- palette (matches the site) ----
+    private static readonly Color Charcoal = Color.FromArgb(28, 28, 30);
+    private static readonly Color Gray = Color.FromArgb(120, 120, 130);
+    private static readonly Color Accent = Color.FromArgb(10, 90, 200);
+    private static readonly Color Divider = Color.FromArgb(238, 238, 242);
+
+    // ---- layout grid ----
+    private const int CardX = 24;
+    private const int CardW = 356;
+
+    // Representative typing signals. NOTE: Text is intentionally left empty — Bowl Bass Keys never
     // captures what you type (privacy), so the beat seeds from the mood, not your keystrokes.
     private static readonly Signals DefaultSignals = new()
     {
@@ -49,29 +63,24 @@ public sealed class MainWindow : Form
 
     public MainWindow()
     {
-        // Start on the default preset (Midnight — the deep-beat blend).
-        var baked = PresetLibrary.Default.Build(AudioEngine.InternalRate);
+        var baked = CodeKeys.Core.Presets.PresetLibrary.Default.Build(AudioEngine.InternalRate);
         _keystrokes = new KeystrokeController(baked.Map, baked.Voices, _engine);
 
-        // Default beat = Root chakra (Mike's current test baseline — paired with Midnight).
+        // Default beat = Root chakra (Mike's test baseline — paired with Midnight keystrokes).
         var spec = SignalsToBeat.Of(DefaultSignals, BeatPreset.Root);
         _beat = new BeatSequencer(AudioEngine.InternalRate, spec);
 
         BuildUi();
 
         _engine.SetBedProvider(_beat);
-        // Fixed internal headroom. The user controls loudness through Windows (WASAPI shared mode
-        // means CodeKeys is its own entry in the system volume mixer) — no separate in-app slider.
-        _engine.MasterVolume = 0.85f;
-        // Both layers ON at startup at their current slider levels (keys 0.55, beat 0.22).
-        _engine.BedEnabled = true;
+        _engine.MasterVolume = 0.85f;     // fixed headroom; loudness is the Windows mixer's job
+        _engine.BedEnabled = true;        // both layers on at startup
         _beat.Reset();
         _engine.Start();
 
         _hook.KeyDown += OnHookKeyDown;
         _hook.KeyUp += OnHookKeyUp;
 
-        // Refresh the beat from live typing every few seconds (applied at the next loop boundary).
         _signalTimer = new System.Windows.Forms.Timer { Interval = 3000 };
         _signalTimer.Tick += OnSignalTick;
         _signalTimer.Start();
@@ -80,14 +89,13 @@ public sealed class MainWindow : Form
     protected override void OnLoad(EventArgs e)
     {
         base.OnLoad(e);
-        _hook.Install(); // install once the message loop is running
+        _hook.Install();
     }
 
     private void OnHookKeyDown(int vk)
     {
         if (vk is VirtualKey.ShiftL or VirtualKey.ShiftR or VirtualKey.Shift) _shiftDown = true;
 
-        // Capture typing signals (category + timing only — never the character).
         var kind = KeyClassifier.Classify(vk);
         bool isUpper = kind == KeyKind.Letter && (_shiftDown ^ CapsLockOn());
         _signals.Record(_clock.ElapsedMilliseconds, kind, isUpper);
@@ -105,7 +113,7 @@ public sealed class MainWindow : Form
     private void OnSignalTick(object? sender, EventArgs e)
     {
         // Feed the conductor the latest typing arousal; it steers the beat gently at the next loop
-        // boundary. The mood (scale/root/tempo range) only changes via the Mood picker → SetSpec.
+        // boundary (and drives living events when that channel is on).
         _beat.Observe(Conductor.Estimate(_signals.Snapshot()));
     }
 
@@ -126,120 +134,59 @@ public sealed class MainWindow : Form
 
     private void BuildUi()
     {
-        // Style: clean, minimal, high-contrast — matches michaelnocito.github.io. White background,
-        // charcoal text, generous whitespace, sans-serif typography, almost no decoration.
         Text = "Bowl Bass Keys";
-        ClientSize = new Size(500, 480);
+        ClientSize = new Size(404, 772);
         StartPosition = FormStartPosition.CenterScreen;
         Font = new Font("Segoe UI", 9.5f);
         MaximizeBox = false;
         FormBorderStyle = FormBorderStyle.FixedSingle;
         BackColor = Color.White;
-        ForeColor = Color.FromArgb(28, 28, 30);
+        ForeColor = Charcoal;
 
-        var charcoal = Color.FromArgb(28, 28, 30);
-        var gray = Color.FromArgb(120, 120, 130);
-        var accent = Color.FromArgb(10, 90, 200);
-
-        // ---- Header: large title + tagline ----
-        var title = new Label
+        // ---- header ----
+        Controls.Add(new Label
         {
             Text = "Bowl Bass Keys",
-            Font = new Font("Segoe UI Semibold", 18f, FontStyle.Regular),
-            ForeColor = charcoal,
+            Font = new Font("Segoe UI Semibold", 19f, FontStyle.Regular),
+            ForeColor = Charcoal,
             AutoSize = true,
-            Left = 28,
-            Top = 22
-        };
-
-        var tagline = new Label
+            Left = CardX, Top = 26,
+        });
+        Controls.Add(new Label
         {
-            Text = "relax as you type/code  ·  space clearing  ·  chakra vibing",
+            Text = "relax as you type  ·  space clearing  ·  chakra vibing",
             Font = new Font("Segoe UI", 9.5f),
-            ForeColor = gray,
+            ForeColor = Gray,
             AutoSize = true,
-            Left = 30,
-            Top = 60
-        };
+            Left = CardX + 2, Top = 64,
+        });
 
-        var hr1 = new Panel
-        {
-            Left = 28, Top = 92, Width = 444, Height = 1,
-            BackColor = Color.FromArgb(230, 230, 234)
-        };
-
-        // ---- Toggles ----
-        _presetPicker = new ComboBox { Visible = false }; // dormant — kept for API compatibility
-
-        _keysToggle = new CheckBox
-        {
-            Text = "Keystrokes",
-            Font = new Font("Segoe UI", 10f),
-            ForeColor = charcoal,
-            Checked = true,
-            AutoSize = true,
-            Left = 28, Top = 110
-        };
+        // ---- SOUND ----
+        Controls.Add(SectionLabel("SOUND", 100));
+        var sound = Card(120, 104);
+        _keysToggle = Row(sound, top: 0, "Keystrokes", "sound on every key, system-wide", out _);
+        sound.Controls.Add(RowDivider(52));
+        _bedToggle = Row(sound, top: 52, "Beat", "the generative bowls + bass bed", out _);
+        _keysToggle.Checked = true;
+        _bedToggle.Checked = true;
         _keysToggle.CheckedChanged += (_, _) => _keystrokes.Enabled = _keysToggle.Checked;
-
-        _bedToggle = new CheckBox
-        {
-            Text = "Beat",
-            Font = new Font("Segoe UI", 10f),
-            ForeColor = charcoal,
-            Checked = true,
-            AutoSize = true,
-            Left = 140, Top = 110
-        };
         _bedToggle.CheckedChanged += (_, _) =>
         {
             _engine.BedEnabled = _bedToggle.Checked;
             if (_bedToggle.Checked) _beat.Reset();
         };
 
-        var demoToggle = new CheckBox
-        {
-            Text = "Demo (fast)",
-            Font = new Font("Segoe UI", 9.5f),
-            ForeColor = gray,
-            Checked = false,
-            AutoSize = true,
-            Left = 220, Top = 111
-        };
-        demoToggle.CheckedChanged += (_, _) => _beat.TimeScale = demoToggle.Checked ? 20.0 : 1.0;
-
-        var resetButton = new Button
-        {
-            Text = "Reset beat",
-            Font = new Font("Segoe UI", 9.5f),
-            FlatStyle = FlatStyle.Flat,
-            ForeColor = accent,
-            BackColor = Color.White,
-            AutoSize = true,
-            Left = 340, Top = 108,
-            Padding = new Padding(8, 2, 8, 2)
-        };
-        resetButton.FlatAppearance.BorderColor = Color.FromArgb(220, 220, 228);
-        resetButton.Click += (_, _) => _beat.Reset();
-
-        // ---- Beat template picker ----
-        var templateLabel = new Label
-        {
-            Text = "BEAT TEMPLATE",
-            Font = new Font("Segoe UI", 8f, FontStyle.Bold),
-            ForeColor = gray,
-            AutoSize = true,
-            Left = 28, Top = 158
-        };
-
+        // ---- TEMPLATE ----
+        Controls.Add(SectionLabel("BEAT TEMPLATE", 240));
+        var template = Card(260, 62);
         _chakraPicker = new ComboBox
         {
             DropDownStyle = ComboBoxStyle.DropDownList,
             Font = new Font("Segoe UI", 10.5f),
             FlatStyle = FlatStyle.Flat,
             BackColor = Color.White,
-            ForeColor = charcoal,
-            Left = 28, Top = 180, Width = 444
+            ForeColor = Charcoal,
+            Left = 16, Top = 16, Width = CardW - 32,
         };
         _chakraPicker.Items.AddRange(new object[]
         {
@@ -256,115 +203,133 @@ public sealed class MainWindow : Form
         });
         _chakraPicker.SelectedIndex = 1;
         _chakraPicker.SelectedIndexChanged += OnChakraChanged;
+        template.Controls.Add(_chakraPicker);
 
-        // ---- Mix levels ----
-        var mixLabel = new Label
+        // ---- MIX ----
+        Controls.Add(SectionLabel("MIX", 338));
+        var mix = Card(358, 160);
+        mix.Controls.Add(MixLabel("Keystrokes", 16));
+        _keysVol = new FlatSlider { Left = 16, Top = 44, Width = CardW - 32, Value = (int)Math.Round(_engine.KeysLevel * 100) };
+        mix.Controls.Add(_keysVol);
+        mix.Controls.Add(RowDivider(86));
+        mix.Controls.Add(MixLabel("Beat", 100));
+        _beatVol = new FlatSlider { Left = 16, Top = 128, Width = CardW - 32, Value = (int)Math.Round(_engine.BedLevel * 100) };
+        mix.Controls.Add(_beatVol);
+        _keysVol.ValueChanged += (_, _) => _engine.KeysLevel = _keysVol.Value / 100f;
+        _beatVol.ValueChanged += (_, _) =>
         {
-            Text = "MIX",
-            Font = new Font("Segoe UI", 8f, FontStyle.Bold),
-            ForeColor = gray,
-            AutoSize = true,
-            Left = 28, Top = 234
+            _engine.BedLevel = _beatVol.Value / 100f;
+            int autoKeys = _beatVol.Value / 2;       // keys auto-track at half the beat level
+            if (_keysVol.Value != autoKeys) _keysVol.Value = autoKeys;
         };
 
-        var keysVolLabel = new Label
+        // ---- FLOW (extras) ----
+        Controls.Add(SectionLabel("FLOW", 530));
+        var flow = Card(550, 116);
+        _livingToggle = Row(flow, top: 0, "Living events", "soft accents that react to your typing flow", out _);
+        flow.Controls.Add(RowDivider(64));
+        _demoToggle = Row(flow, top: 64, "Demo", "fast-forward the build to hear it quickly", out _);
+        _livingToggle.CheckedChanged += (_, _) => _beat.LivingEventsEnabled = _livingToggle.Checked;
+        _demoToggle.CheckedChanged += (_, _) => _beat.TimeScale = _demoToggle.Checked ? 20.0 : 1.0;
+
+        // ---- restart ----
+        var restart = new Button
         {
-            Text = "Keystrokes",
-            Font = new Font("Segoe UI", 9.5f),
-            ForeColor = charcoal,
-            AutoSize = true,
-            Left = 28, Top = 258
-        };
-        var keysVolSlider = new TrackBar
-        {
-            Minimum = 0, Maximum = 100,
-            Value = (int)Math.Round(_engine.KeysLevel * 100),
-            TickFrequency = 25,
+            Text = "Restart beat",
+            Font = new Font("Segoe UI", 10f),
+            FlatStyle = FlatStyle.Flat,
+            ForeColor = Accent,
             BackColor = Color.White,
-            Width = 444, Left = 26, Top = 278
+            Left = CardX, Top = 682, Width = CardW, Height = 42,
         };
-        keysVolSlider.ValueChanged += (_, _) => _engine.KeysLevel = keysVolSlider.Value / 100f;
+        restart.FlatAppearance.BorderColor = Color.FromArgb(225, 225, 232);
+        restart.FlatAppearance.MouseOverBackColor = Color.FromArgb(245, 248, 253);
+        restart.Click += (_, _) => _beat.Reset();
+        Controls.Add(restart);
 
-        var beatVolLabel = new Label
+        // ---- footer ----
+        Controls.Add(new Label
         {
-            Text = "Beat",
-            Font = new Font("Segoe UI", 9.5f),
-            ForeColor = charcoal,
-            AutoSize = true,
-            Left = 28, Top = 330
-        };
-        var beatVolSlider = new TrackBar
-        {
-            Minimum = 0, Maximum = 100,
-            Value = (int)Math.Round(_engine.BedLevel * 100),
-            TickFrequency = 25,
-            BackColor = Color.White,
-            Width = 444, Left = 26, Top = 350
-        };
-        beatVolSlider.ValueChanged += (_, _) =>
-        {
-            _engine.BedLevel = beatVolSlider.Value / 100f;
-            int autoKeys = beatVolSlider.Value / 2;
-            if (keysVolSlider.Value != autoKeys) keysVolSlider.Value = autoKeys;
-        };
-
-        var volHint = new Label
-        {
-            Text = "Overall volume follows Windows.  Keys auto-track at half the beat level.",
+            Text = "Overall volume follows Windows.",
             Font = new Font("Segoe UI", 8.5f),
-            AutoSize = false,
-            Left = 28, Top = 404, Width = 444, Height = 16,
-            ForeColor = gray
-        };
-
-        // ---- Footer ----
-        var hr2 = new Panel
-        {
-            Left = 28, Top = 432, Width = 444, Height = 1,
-            BackColor = Color.FromArgb(230, 230, 234)
-        };
-
-        var stamp = new Label
+            ForeColor = Gray,
+            AutoSize = false, TextAlign = ContentAlignment.MiddleCenter,
+            Left = CardX, Top = 734, Width = CardW, Height = 16,
+        });
+        Controls.Add(new Label
         {
             Text = BuildInfo.Full,
             Font = new Font("Segoe UI", 8f),
-            Dock = DockStyle.Bottom,
-            Height = 24,
-            TextAlign = ContentAlignment.MiddleRight,
-            Padding = new Padding(0, 0, 28, 6),
-            ForeColor = gray
-        };
+            ForeColor = Color.FromArgb(170, 170, 178),
+            AutoSize = false, TextAlign = ContentAlignment.MiddleCenter,
+            Left = CardX, Top = 752, Width = CardW, Height = 14,
+        });
 
-        // ---- Hidden status (kept for keystroke-debug telemetry) ----
-        _status = new Label
-        {
-            Text = "",
-            Visible = false,
-            AutoSize = false,
-            Left = 0, Top = 0, Width = 1, Height = 1
-        };
-
-        Controls.Add(title);
-        Controls.Add(tagline);
-        Controls.Add(hr1);
-        Controls.Add(_keysToggle);
-        Controls.Add(_bedToggle);
-        Controls.Add(demoToggle);
-        Controls.Add(resetButton);
-        Controls.Add(templateLabel);
-        Controls.Add(_chakraPicker);
-        Controls.Add(mixLabel);
-        Controls.Add(keysVolLabel);
-        Controls.Add(keysVolSlider);
-        Controls.Add(beatVolLabel);
-        Controls.Add(beatVolSlider);
-        Controls.Add(volHint);
-        Controls.Add(hr2);
+        // hidden status (keystroke-debug telemetry)
+        _status = new Label { Visible = false, Left = 0, Top = 0, Width = 1, Height = 1 };
         Controls.Add(_status);
-        Controls.Add(stamp);
     }
 
-    /// <summary>An item in the chakra picker — pairs a display label with the underlying preset.</summary>
+    // ---- small UI builders ----
+
+    private static Label SectionLabel(string text, int top) => new()
+    {
+        Text = text,
+        Font = new Font("Segoe UI", 8f, FontStyle.Bold),
+        ForeColor = Gray,
+        AutoSize = true,
+        Left = CardX + 6, Top = top,
+    };
+
+    private CardPanel Card(int top, int height)
+    {
+        var c = new CardPanel { Left = CardX, Top = top, Width = CardW, Height = height };
+        Controls.Add(c);
+        return c;
+    }
+
+    /// <summary>A settings row inside a card: title (+ optional subtitle) on the left, a toggle on the right.</summary>
+    private ToggleSwitch Row(CardPanel card, int top, string title, string subtitle, out Label titleLabel)
+    {
+        titleLabel = new Label
+        {
+            Text = title,
+            Font = new Font("Segoe UI", 10.5f),
+            ForeColor = Charcoal,
+            AutoSize = true,
+            Left = 18, Top = top + (subtitle.Length > 0 ? 13 : 18),
+        };
+        card.Controls.Add(titleLabel);
+        if (subtitle.Length > 0)
+            card.Controls.Add(new Label
+            {
+                Text = subtitle,
+                Font = new Font("Segoe UI", 8.5f),
+                ForeColor = Gray,
+                AutoSize = true,
+                Left = 18, Top = top + 34,
+            });
+        var toggle = new ToggleSwitch { OnColor = Accent, Left = CardW - 16 - 48, Top = top + 14 };
+        card.Controls.Add(toggle);
+        return toggle;
+    }
+
+    private static Label MixLabel(string text, int top) => new()
+    {
+        Text = text,
+        Font = new Font("Segoe UI", 10f),
+        ForeColor = Charcoal,
+        AutoSize = true,
+        Left = 18, Top = top,
+    };
+
+    private static Panel RowDivider(int top) => new()
+    {
+        Left = 18, Top = top, Width = CardW - 36, Height = 1,
+        BackColor = Divider,
+    };
+
+    /// <summary>An item in the template picker — pairs a display label with the underlying preset.</summary>
     private sealed record ChakraOption(BeatPreset Preset, string Label)
     {
         public override string ToString() => Label;
@@ -373,17 +338,9 @@ public sealed class MainWindow : Form
     private void OnChakraChanged(object? sender, EventArgs e)
     {
         if (_chakraPicker.SelectedItem is not ChakraOption opt) return;
-        // SetSpec restarts the additive build from silence, so the chosen chakra eases in cleanly.
+        // SetSpec restarts the build from silence, so the chosen template eases in cleanly.
         _beat.SetSpec(SignalsToBeat.Of(DefaultSignals, opt.Preset));
         if (_bedToggle.Checked) _beat.Reset();
-    }
-
-    private void OnPresetChanged(object? sender, EventArgs e)
-    {
-        if (_presetPicker.SelectedItem is not Preset preset) return;
-        var baked = preset.Build(AudioEngine.InternalRate);
-        _keystrokes.SetVoices(baked.Map, baked.Voices);
-        _status.Text = "ready";
     }
 
     protected override void OnFormClosed(FormClosedEventArgs e)

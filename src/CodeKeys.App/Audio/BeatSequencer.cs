@@ -49,6 +49,15 @@ public sealed class BeatSequencer : ISampleProvider
     private double _sensitivity = 1.25; // user reactivity multiplier (1 = baseline; default +25%)
     private double _noteFill = 0.0;     // note-fill factor passed to BeatPattern — 0 (sparse) → 1 (full)
     private int _sweepBowlMidi = -1;    // Chakra Sweep: the current stage's bowl MIDI (-1 = not sweeping)
+
+    // Living events (optional): a derivative-driven, self-calibrating accent channel. The detector
+    // watches the arousal stream; when it fires we inject a soft one-shot chime (rising) or splash
+    // (falling) directly into the mix at the moment of the event — an "auditory icon", separate from
+    // the looping bed. Off by default; the bed is unchanged when disabled.
+    private readonly LivingEventDetector _events = new();
+    private bool _livingEvents;
+    private int _eventChimeMidi = -1;   // baked Chime pitch used for a rising (flow-burst) accent
+    private int _eventSplashMidi = -1;  // baked Splash pitch used for a falling (settling) accent
     private Scheduled[] _schedule = Array.Empty<Scheduled>();
     private long _loopLen = 1;
     private long _playhead;
@@ -84,6 +93,7 @@ public sealed class BeatSequencer : ISampleProvider
             _playhead = 0;
             _nextIdx = 0;
             _active.Clear();
+            _events.Reset();
         }
     }
 
@@ -107,6 +117,7 @@ public sealed class BeatSequencer : ISampleProvider
             _playhead = 0;
             _nextIdx = 0;
             _active.Clear();
+            _events.Reset();
         }
     }
 
@@ -118,9 +129,40 @@ public sealed class BeatSequencer : ISampleProvider
     public void Observe(double arousal)
     {
         double a = Math.Min(1.0, Math.Max(0.0, arousal));
-        // Smooth toward the new reading (on top of the 30s signals window) so the conductor follows
-        // a settled trend, never a single snapshot — deliberately not hyper-responsive.
-        lock (_gate) _userArousal += (a - _userArousal) * 0.25;
+        lock (_gate)
+        {
+            // Smooth toward the new reading (on top of the 30s signals window) so the conductor follows
+            // a settled trend, never a single snapshot — deliberately not hyper-responsive.
+            _userArousal += (a - _userArousal) * 0.25;
+
+            // Living events run off the RAW reading (its change/velocity), not the smoothed trend, so a
+            // genuine burst or settle is detected before the smoothing irons it out. Fire a soft accent
+            // the instant the detector trips — a one-shot, distinct from the looping bed.
+            if (_livingEvents)
+            {
+                var kind = _events.Push(a);
+                if (kind == LivingEventKind.Rising) Inject(BeatLayer.Chime, _eventChimeMidi, 0.16f);
+                else if (kind == LivingEventKind.Falling) Inject(BeatLayer.Splash, _eventSplashMidi, 0.22f);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Toggle the living-events accent channel (off by default). Inspired by how PlantWave fires
+    /// extra sounds from the rate-of-change of its signal. Resetting the detector on toggle so it
+    /// re-warms cleanly. Does not touch the bed — when off, playback is byte-identical.
+    /// </summary>
+    public bool LivingEventsEnabled
+    {
+        get { lock (_gate) return _livingEvents; }
+        set { lock (_gate) { _livingEvents = value; _events.Reset(); } }
+    }
+
+    /// <summary>Spawn a single pre-baked voice into the live mix immediately. Caller holds the gate.</summary>
+    private void Inject(BeatLayer layer, int midi, float gain)
+    {
+        if (midi >= 0 && _bank.TryGetValue((layer, midi), out var data))
+            _active.Add(new ActiveVoice { Data = data, Pos = 0, Gain = gain });
     }
 
     /// <summary>
@@ -188,7 +230,11 @@ public sealed class BeatSequencer : ISampleProvider
             Put(BeatLayer.Bowl, SignalsToBeat.ChakraBowlMidi(spec.Preset), chakraFreq.Value);
         else
             foreach (int deg in new[] { 0, 4 }) Put(BeatLayer.Bowl, scale.DegreeToMidi(root, deg));    // Tibetan bowl strikes
-        foreach (int deg in new[] { 0, 2, 4 }) Put(BeatLayer.Chime, scale.DegreeToMidi(root + 24, deg)); // high sparkle (unused)
+        foreach (int deg in new[] { 0, 2, 4 }) Put(BeatLayer.Chime, scale.DegreeToMidi(root + 24, deg)); // high sparkle (unused / living events)
+        // Living-events accent pitches (consonant chord tones): chime an octave up for a rising
+        // flow-burst, a dark splash at the root for a settle. Both already baked above.
+        _eventChimeMidi = scale.DegreeToMidi(root + 24, 0);
+        _eventSplashMidi = scale.DegreeToMidi(root, 0);
         for (int d = 0; d < span; d++)
         {
             int midi = scale.DegreeToMidi(root + 12, d);
