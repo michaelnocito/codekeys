@@ -49,8 +49,10 @@ How the data is held:
 
 ## What it does
 
-- **Keystrokes** — a sound on every key, system-wide (the "Midnight" voicing: deep low thumps,
-  mid taps, a warm top end, a soft snare on Enter).
+- **Keystrokes** — a sound on every key, system-wide. Six selectable voicing packs: **Deep &
+  Warm** (default — deep thumps, mid taps, warm top, soft snare), **Soft Mallet**, **Warm Keys**,
+  **Felt Piano**, **Water Drops**, and a deliberately silly **Boings**. The four calm packs are
+  tuned to the beds' key so they stay consonant with whatever beat is playing.
 - **Beat** — a generative bed of deep bass + singing bowls that adapts to your typing via an
   adaptive "conductor" (see `DEV_NOTES.md` / `docs/sound-design.md`). Templates: the seven
   chakra tunings, a 432 Hz Space Clearing mode, and a 21-minute guided Chakra Sweep.

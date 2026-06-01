@@ -1,10 +1,12 @@
 using System.Diagnostics;
+using System.Linq;
 using System.Runtime.InteropServices;
 using CodeKeys.App.Audio;
 using CodeKeys.App.Input;
 using CodeKeys.App.UI.Controls;
 using CodeKeys.Core.Beat;
 using CodeKeys.Core.Input;
+using CodeKeys.Core.Presets;
 
 namespace CodeKeys.App.UI;
 
@@ -34,6 +36,7 @@ public sealed class MainWindow : Form
     private ToggleSwitch _demoToggle = null!;
     private FlatSlider _keysVol = null!;
     private FlatSlider _beatVol = null!;
+    private ComboBox _voicePicker = null!;
     private ComboBox _chakraPicker = null!;
     private Label _status = null!;
 
@@ -135,7 +138,7 @@ public sealed class MainWindow : Form
     private void BuildUi()
     {
         Text = "Bowl Bass Keys";
-        ClientSize = new Size(404, 772);
+        ClientSize = new Size(404, 864);
         StartPosition = FormStartPosition.CenterScreen;
         Font = new Font("Segoe UI", 9.5f);
         MaximizeBox = false;
@@ -176,9 +179,26 @@ public sealed class MainWindow : Form
             if (_bedToggle.Checked) _beat.Reset();
         };
 
+        // ---- KEYSTROKE SOUND (the keystroke voicing packs; the beat is the same across all) ----
+        Controls.Add(SectionLabel("KEYSTROKE SOUND", 236));
+        var voiceCard = Card(256, 62);
+        _voicePicker = new ComboBox
+        {
+            DropDownStyle = ComboBoxStyle.DropDownList,
+            Font = new Font("Segoe UI", 10.5f),
+            FlatStyle = FlatStyle.Flat,
+            BackColor = Color.White,
+            ForeColor = Charcoal,
+            Left = 16, Top = 16, Width = CardW - 32,
+        };
+        _voicePicker.Items.AddRange(PresetLibrary.All.ToArray());
+        _voicePicker.SelectedIndex = 0; // Deep & Warm (default)
+        _voicePicker.SelectedIndexChanged += OnVoiceChanged;
+        voiceCard.Controls.Add(_voicePicker);
+
         // ---- TEMPLATE ----
-        Controls.Add(SectionLabel("BEAT TEMPLATE", 240));
-        var template = Card(260, 62);
+        Controls.Add(SectionLabel("BEAT TEMPLATE", 332));
+        var template = Card(352, 62);
         _chakraPicker = new ComboBox
         {
             DropDownStyle = ComboBoxStyle.DropDownList,
@@ -205,8 +225,8 @@ public sealed class MainWindow : Form
         template.Controls.Add(_chakraPicker);
 
         // ---- MIX ----
-        Controls.Add(SectionLabel("MIX", 338));
-        var mix = Card(358, 160);
+        Controls.Add(SectionLabel("MIX", 428));
+        var mix = Card(448, 160);
         mix.Controls.Add(MixLabel("Keystrokes", 16));
         _keysVol = new FlatSlider { Left = 16, Top = 44, Width = CardW - 32, Value = (int)Math.Round(_engine.KeysLevel * 100) };
         mix.Controls.Add(_keysVol);
@@ -223,8 +243,8 @@ public sealed class MainWindow : Form
         };
 
         // ---- FLOW (extras) ----
-        Controls.Add(SectionLabel("FLOW", 530));
-        var flow = Card(550, 116);
+        Controls.Add(SectionLabel("FLOW", 620));
+        var flow = Card(640, 116);
         _livingToggle = Row(flow, top: 0, "Living events", "soft accents that react to your typing flow", out _);
         flow.Controls.Add(RowDivider(64));
         _demoToggle = Row(flow, top: 64, "Demo", "fast-forward the build to hear it quickly", out _);
@@ -239,7 +259,7 @@ public sealed class MainWindow : Form
             FlatStyle = FlatStyle.Flat,
             ForeColor = Accent,
             BackColor = Color.White,
-            Left = CardX, Top = 682, Width = CardW, Height = 42,
+            Left = CardX, Top = 772, Width = CardW, Height = 42,
         };
         restart.FlatAppearance.BorderColor = Color.FromArgb(225, 225, 232);
         restart.FlatAppearance.MouseOverBackColor = Color.FromArgb(245, 248, 253);
@@ -253,7 +273,7 @@ public sealed class MainWindow : Form
             Font = new Font("Segoe UI", 8.5f),
             ForeColor = Gray,
             AutoSize = false, TextAlign = ContentAlignment.MiddleCenter,
-            Left = CardX, Top = 734, Width = CardW, Height = 16,
+            Left = CardX, Top = 826, Width = CardW, Height = 16,
         });
         Controls.Add(new Label
         {
@@ -261,7 +281,7 @@ public sealed class MainWindow : Form
             Font = new Font("Segoe UI", 8f),
             ForeColor = Color.FromArgb(170, 170, 178),
             AutoSize = false, TextAlign = ContentAlignment.MiddleCenter,
-            Left = CardX, Top = 752, Width = CardW, Height = 14,
+            Left = CardX, Top = 844, Width = CardW, Height = 14,
         });
 
         // hidden status (keystroke-debug telemetry)
@@ -332,6 +352,15 @@ public sealed class MainWindow : Form
     private sealed record ChakraOption(BeatPreset Preset, string Label)
     {
         public override string ToString() => Label;
+    }
+
+    private void OnVoiceChanged(object? sender, EventArgs e)
+    {
+        if (_voicePicker.SelectedItem is not Preset preset) return;
+        // Swap the keystroke voicing live — bakes the new pack and hands it to the controller.
+        // The beat (bowls + bass) is untouched.
+        var baked = preset.Build(AudioEngine.InternalRate);
+        _keystrokes.SetVoices(baked.Map, baked.Voices);
     }
 
     private void OnChakraChanged(object? sender, EventArgs e)

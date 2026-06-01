@@ -6,9 +6,29 @@ to **Bowl Bass Keys**.)
 Last updated: 2026-06-01
 
 ## Where we are
-Working app, system-wide. Builds clean, **207/207 unit tests pass**.
-Latest commit: removed Tibetan Beat template; security/compliance audit (CLEAN) +
-README refresh; game-flow + launch handoffs in docs/.
+Working app, system-wide. Builds clean, **220/220 unit tests pass**.
+Latest commit: six selectable keystroke voicing packs + KEYSTROKE SOUND picker.
+
+## Keystroke voicing packs (2026-06-01)
+Keystrokes are no longer locked to one voicing — there's a **KEYSTROKE SOUND** picker (new card
+in the UI, above BEAT TEMPLATE). The BEAT (bowls + bass) is unchanged across all packs; only the
+keystroke sound changes. **Six exposed packs** (`PresetLibrary.All`):
+- **Deep & Warm** (`deep-warm`, default) — the old "Midnight" blend renamed (deep thump + drum
+  pops + occasional smooth synth/snare; A2 MinorPentatonic, bass-percussive, key-neutral).
+- **Soft Mallet** (`soft-mallet`) — marimba. **Warm Keys** (`warm-keys`) — Rhodes EP. **Felt
+  Piano** (`felt-piano`) — soft/muted acoustic piano (gain lowered). **Water Drops**
+  (`water-drops`) — liquid droplets. All four tuned to **D MajorPentatonic** (the beds' key) so
+  the keys stay consonant with whatever beat plays.
+- **Boings** (`boings`, silly) — cartoon boing/pop/zap; deliberately breaks the calm.
+- New `Core/Audio/ToyVoiceFactory.cs` provides `CreateDroplet` (water drop = rising-pitch ploop),
+  `CreateBoing` (triangle, down-slide + decaying vibrato), `CreatePop`, `CreateZap`. Pure synthesis.
+- ⚠️ Gotcha fixed: `InstrumentFactory.Create{Piano,Rhodes,Marimba}`'s 3rd positional arg is
+  `durationSeconds`, NOT gain — pass `gain:` by name (Felt Piano relies on this to be muted).
+- Older voicings (Keyboard/Pulse/Thock/AfterDark/Electric) kept private in PresetLibrary, not exposed.
+- UI: `_voicePicker` ComboBox → `OnVoiceChanged` → `_keystrokes.SetVoices(baked.Map, baked.Voices)`
+  (live swap, no beat restart). Window grew to 404×864 to fit the new card. `PresetLibraryTests` +
+  updated `PresetTests` (was "locked to Midnight"). 220/220 tests. ⚠️ Awaiting Mike's ear test on
+  the new packs (tune gains/decays; decide if Boings is too much / packs need more variety).
 
 ## Tibetan Beat removed + compliance pass (2026-06-01)
 - **Tibetan Beat template removed** per Mike — gone from the picker and all user/marketing

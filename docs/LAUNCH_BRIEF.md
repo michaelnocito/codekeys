@@ -40,9 +40,13 @@ the low end that makes it work.
 
 ### 2.1 Keystroke sound layer ("Keys")
 - **System-wide global keyboard hook** — sounds play no matter which app you're typing in.
-- **"Midnight" voicing** (the signature sound): a deep-beat blend with a **spatial key map** —
-  low keys thump like a deep kick, middle keys pop as taps, the top row is a warm smooth synth,
-  and Enter is a soft snare. Pitch zones follow the physical location of the key.
+- **Six selectable voicing packs** (the beat stays the same; only the keystroke sound changes):
+  - **Deep & Warm** (default) — a deep-beat blend with a **spatial key map**: low keys thump like
+    a deep kick, middle keys pop as taps, the top row is a warm smooth synth, Enter is a soft snare.
+  - **Soft Mallet** (mellow marimba), **Warm Keys** (Rhodes electric piano), **Felt Piano** (soft,
+    muted), **Water Drops** (gentle liquid droplets) — the four calm packs, all tuned to the beds'
+    key so they stay consonant with whatever beat is playing.
+  - **Boings** — a deliberately silly cartoon pack (boings/pops/zaps), for fun.
 - Procedurally synthesized (no audio sample files), click-free envelopes.
 
 ### 2.2 Generative beat bed ("Beat") — 9 selectable templates
