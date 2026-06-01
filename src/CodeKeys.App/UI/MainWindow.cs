@@ -126,100 +126,180 @@ public sealed class MainWindow : Form
 
     private void BuildUi()
     {
+        // Style: clean, minimal, high-contrast — matches michaelnocito.github.io. White background,
+        // charcoal text, generous whitespace, sans-serif typography, almost no decoration.
         Text = "Bowl Bass Keys";
-        ClientSize = new Size(440, 370);
+        ClientSize = new Size(500, 480);
         StartPosition = FormStartPosition.CenterScreen;
-        Font = new Font("Segoe UI", 9f);
+        Font = new Font("Segoe UI", 9.5f);
         MaximizeBox = false;
         FormBorderStyle = FormBorderStyle.FixedSingle;
+        BackColor = Color.White;
+        ForeColor = Color.FromArgb(28, 28, 30);
 
-        var heading = new Label
+        var charcoal = Color.FromArgb(28, 28, 30);
+        var gray = Color.FromArgb(120, 120, 130);
+        var accent = Color.FromArgb(10, 90, 200);
+
+        // ---- Header: large title + tagline ----
+        var title = new Label
         {
-            Text = "Bowl Bass Keys  ·  relax as you type/code  ·  space clearing  ·  chakra vibing",
-            Dock = DockStyle.Top,
-            Padding = new Padding(14, 14, 14, 6),
-            Height = 42
+            Text = "Bowl Bass Keys",
+            Font = new Font("Segoe UI Semibold", 18f, FontStyle.Regular),
+            ForeColor = charcoal,
+            AutoSize = true,
+            Left = 28,
+            Top = 22
         };
 
-        // Keystroke voicing is fixed for this app — no picker, no label. Focus is on the beat
-        // templates (the chakra picker below); keystrokes are just the deep-beat blend.
-        _presetPicker = new ComboBox { Visible = false }; // field still required by OnPresetChanged; kept hidden
+        var tagline = new Label
+        {
+            Text = "relax as you type/code  ·  space clearing  ·  chakra vibing",
+            Font = new Font("Segoe UI", 9.5f),
+            ForeColor = gray,
+            AutoSize = true,
+            Left = 30,
+            Top = 60
+        };
 
-        _keysToggle = new CheckBox { Text = "⌨  Keystrokes", Checked = true, AutoSize = true, Left = 16, Top = 92 };
+        var hr1 = new Panel
+        {
+            Left = 28, Top = 92, Width = 444, Height = 1,
+            BackColor = Color.FromArgb(230, 230, 234)
+        };
+
+        // ---- Toggles ----
+        _presetPicker = new ComboBox { Visible = false }; // dormant — kept for API compatibility
+
+        _keysToggle = new CheckBox
+        {
+            Text = "Keystrokes",
+            Font = new Font("Segoe UI", 10f),
+            ForeColor = charcoal,
+            Checked = true,
+            AutoSize = true,
+            Left = 28, Top = 110
+        };
         _keysToggle.CheckedChanged += (_, _) => _keystrokes.Enabled = _keysToggle.Checked;
 
-        _bedToggle = new CheckBox { Text = "🥁  Beat", Checked = true, AutoSize = true, Left = 16, Top = 124 };
+        _bedToggle = new CheckBox
+        {
+            Text = "Beat",
+            Font = new Font("Segoe UI", 10f),
+            ForeColor = charcoal,
+            Checked = true,
+            AutoSize = true,
+            Left = 140, Top = 110
+        };
         _bedToggle.CheckedChanged += (_, _) =>
         {
             _engine.BedEnabled = _bedToggle.Checked;
-            // The cycle clock advances on the audio thread regardless of mute state, so without a
-            // reset, toggling Beat on minutes after launch would land mid-fall or post-cycle (=
-            // silent). Restart from the build's beginning every time it's enabled.
             if (_bedToggle.Checked) _beat.Reset();
         };
 
-        // Chakra picker — switches the bed between Focused (no bowl) and the seven Solfeggio-tuned
-        // chakra modes (each rings a Tibetan bowl at that chakra's frequency over the same low bass).
-        var chakraLabel = new Label { Text = "🪷", AutoSize = true, Left = 130, Top = 126 };
+        var demoToggle = new CheckBox
+        {
+            Text = "Demo (fast)",
+            Font = new Font("Segoe UI", 9.5f),
+            ForeColor = gray,
+            Checked = false,
+            AutoSize = true,
+            Left = 220, Top = 111
+        };
+        demoToggle.CheckedChanged += (_, _) => _beat.TimeScale = demoToggle.Checked ? 20.0 : 1.0;
+
+        var resetButton = new Button
+        {
+            Text = "Reset beat",
+            Font = new Font("Segoe UI", 9.5f),
+            FlatStyle = FlatStyle.Flat,
+            ForeColor = accent,
+            BackColor = Color.White,
+            AutoSize = true,
+            Left = 340, Top = 108,
+            Padding = new Padding(8, 2, 8, 2)
+        };
+        resetButton.FlatAppearance.BorderColor = Color.FromArgb(220, 220, 228);
+        resetButton.Click += (_, _) => _beat.Reset();
+
+        // ---- Beat template picker ----
+        var templateLabel = new Label
+        {
+            Text = "BEAT TEMPLATE",
+            Font = new Font("Segoe UI", 8f, FontStyle.Bold),
+            ForeColor = gray,
+            AutoSize = true,
+            Left = 28, Top = 158
+        };
+
         _chakraPicker = new ComboBox
         {
             DropDownStyle = ComboBoxStyle.DropDownList,
-            Left = 150,
-            Top = 122,
-            Width = 175
+            Font = new Font("Segoe UI", 10.5f),
+            FlatStyle = FlatStyle.Flat,
+            BackColor = Color.White,
+            ForeColor = charcoal,
+            Left = 28, Top = 180, Width = 444
         };
         _chakraPicker.Items.AddRange(new object[]
         {
-            new ChakraOption(BeatPreset.Focused,     "Tibetan Beat"),
-            new ChakraOption(BeatPreset.Root,        "Root · 396 Hz"),
-            new ChakraOption(BeatPreset.Sacral,      "Sacral · 417 Hz"),
-            new ChakraOption(BeatPreset.SolarPlexus, "Solar Plexus · 528 Hz"),
-            new ChakraOption(BeatPreset.Heart,       "Heart · 639 Hz"),
-            new ChakraOption(BeatPreset.Throat,      "Throat · 741 Hz"),
-            new ChakraOption(BeatPreset.ThirdEye,    "Third Eye · 852 Hz"),
-            new ChakraOption(BeatPreset.Crown,       "Crown · 963 Hz"),
+            new ChakraOption(BeatPreset.Focused,       "Tibetan Beat"),
+            new ChakraOption(BeatPreset.Root,          "Root chakra  ·  396 Hz"),
+            new ChakraOption(BeatPreset.Sacral,        "Sacral chakra  ·  417 Hz"),
+            new ChakraOption(BeatPreset.SolarPlexus,   "Solar Plexus chakra  ·  528 Hz"),
+            new ChakraOption(BeatPreset.Heart,         "Heart chakra  ·  639 Hz"),
+            new ChakraOption(BeatPreset.Throat,        "Throat chakra  ·  741 Hz"),
+            new ChakraOption(BeatPreset.ThirdEye,      "Third Eye chakra  ·  852 Hz"),
+            new ChakraOption(BeatPreset.Crown,         "Crown chakra  ·  963 Hz"),
+            new ChakraOption(BeatPreset.SpaceClearing, "Space Clearing  ·  432 Hz"),
         });
-        _chakraPicker.SelectedIndex = 1; // Root chakra — Mike's current test baseline
+        _chakraPicker.SelectedIndex = 1;
         _chakraPicker.SelectedIndexChanged += OnChakraChanged;
 
-        // Dev aid: compress the build clock 20× so the arc is auditionable in seconds.
-        var demoToggle = new CheckBox { Text = "⚡  Demo (fast)", Checked = false, AutoSize = true, Left = 335, Top = 124 };
-        demoToggle.CheckedChanged += (_, _) => _beat.TimeScale = demoToggle.Checked ? 20.0 : 1.0;
+        // ---- Mix levels ----
+        var mixLabel = new Label
+        {
+            Text = "MIX",
+            Font = new Font("Segoe UI", 8f, FontStyle.Bold),
+            ForeColor = gray,
+            AutoSize = true,
+            Left = 28, Top = 234
+        };
 
-        // Restart the breathing cycle at silence without toggling Beat off/on.
-        var resetButton = new Button { Text = "↺  Reset beat", AutoSize = true, Left = 16, Top = 156 };
-        resetButton.Click += (_, _) => _beat.Reset();
-
-        // Per-layer levels (the relative mix). The master is the Windows volume mixer entry —
-        // these knobs let Mike dial keystrokes vs the beat against each other without leaving
-        // the system master out of his hands.
-        var keysVolLabel = new Label { Text = "⌨  Keystrokes level", AutoSize = true, Left = 16, Top = 192 };
+        var keysVolLabel = new Label
+        {
+            Text = "Keystrokes",
+            Font = new Font("Segoe UI", 9.5f),
+            ForeColor = charcoal,
+            AutoSize = true,
+            Left = 28, Top = 258
+        };
         var keysVolSlider = new TrackBar
         {
-            Minimum = 0,
-            Maximum = 100,
+            Minimum = 0, Maximum = 100,
             Value = (int)Math.Round(_engine.KeysLevel * 100),
             TickFrequency = 25,
-            Width = 408,
-            Left = 14,
-            Top = 212
+            BackColor = Color.White,
+            Width = 444, Left = 26, Top = 278
         };
         keysVolSlider.ValueChanged += (_, _) => _engine.KeysLevel = keysVolSlider.Value / 100f;
 
-        var beatVolLabel = new Label { Text = "🥁  Beat level", AutoSize = true, Left = 16, Top = 260 };
+        var beatVolLabel = new Label
+        {
+            Text = "Beat",
+            Font = new Font("Segoe UI", 9.5f),
+            ForeColor = charcoal,
+            AutoSize = true,
+            Left = 28, Top = 330
+        };
         var beatVolSlider = new TrackBar
         {
-            Minimum = 0,
-            Maximum = 100,
+            Minimum = 0, Maximum = 100,
             Value = (int)Math.Round(_engine.BedLevel * 100),
             TickFrequency = 25,
-            Width = 408,
-            Left = 14,
-            Top = 280
+            BackColor = Color.White,
+            Width = 444, Left = 26, Top = 350
         };
-        // Moving the beat slider sets the bed level AND auto-syncs the keys slider to half (bass
-        // is the star; keys sit at half the beat level by default). User can override the keys
-        // slider directly afterwards — only beat-slider moves drag it along.
         beatVolSlider.ValueChanged += (_, _) =>
         {
             _engine.BedLevel = beatVolSlider.Value / 100f;
@@ -229,51 +309,57 @@ public sealed class MainWindow : Form
 
         var volHint = new Label
         {
-            Text = "🔊  Overall volume follows Windows — these sliders adjust the relative mix.",
+            Text = "Overall volume follows Windows.  Keys auto-track at half the beat level.",
+            Font = new Font("Segoe UI", 8.5f),
             AutoSize = false,
-            Left = 16,
-            Top = 326,
-            Width = 408,
-            Height = 18,
-            ForeColor = SystemColors.GrayText
+            Left = 28, Top = 404, Width = 444, Height = 16,
+            ForeColor = gray
         };
 
-        _status = new Label
+        // ---- Footer ----
+        var hr2 = new Panel
         {
-            Text = "ready",
-            AutoSize = false,
-            Left = 330,
-            Top = 54,
-            Width = 94,
-            Height = 22,
-            TextAlign = ContentAlignment.MiddleRight,
-            ForeColor = SystemColors.Highlight,
-            Font = new Font("Cascadia Mono", 10f)
+            Left = 28, Top = 432, Width = 444, Height = 1,
+            BackColor = Color.FromArgb(230, 230, 234)
         };
 
         var stamp = new Label
         {
             Text = BuildInfo.Full,
+            Font = new Font("Segoe UI", 8f),
             Dock = DockStyle.Bottom,
-            Height = 20,
+            Height = 24,
             TextAlign = ContentAlignment.MiddleRight,
-            Padding = new Padding(0, 0, 12, 0),
-            ForeColor = SystemColors.GrayText
+            Padding = new Padding(0, 0, 28, 6),
+            ForeColor = gray
         };
 
+        // ---- Hidden status (kept for keystroke-debug telemetry) ----
+        _status = new Label
+        {
+            Text = "",
+            Visible = false,
+            AutoSize = false,
+            Left = 0, Top = 0, Width = 1, Height = 1
+        };
+
+        Controls.Add(title);
+        Controls.Add(tagline);
+        Controls.Add(hr1);
         Controls.Add(_keysToggle);
         Controls.Add(_bedToggle);
-        Controls.Add(chakraLabel);
-        Controls.Add(_chakraPicker);
         Controls.Add(demoToggle);
         Controls.Add(resetButton);
+        Controls.Add(templateLabel);
+        Controls.Add(_chakraPicker);
+        Controls.Add(mixLabel);
         Controls.Add(keysVolLabel);
         Controls.Add(keysVolSlider);
         Controls.Add(beatVolLabel);
         Controls.Add(beatVolSlider);
         Controls.Add(volHint);
+        Controls.Add(hr2);
         Controls.Add(_status);
-        Controls.Add(heading);
         Controls.Add(stamp);
     }
 

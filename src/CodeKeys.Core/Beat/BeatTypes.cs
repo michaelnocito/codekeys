@@ -9,7 +9,9 @@ public enum BeatPreset
 {
     Focused, Relaxed, Burnout, Silly,
     // Chakra tunings — same low bass hum + a singing bowl at the Solfeggio frequency.
-    Root, Sacral, SolarPlexus, Heart, Throat, ThirdEye, Crown
+    Root, Sacral, SolarPlexus, Heart, Throat, ThirdEye, Crown,
+    // Space Clearing — bowl tuned to 432 Hz ("universe vibration"); faster pacing for sweeping energy.
+    SpaceClearing
 }
 
 /// <summary>The scales a beat can use. This is the tonal source of truth key-sounds must read.</summary>

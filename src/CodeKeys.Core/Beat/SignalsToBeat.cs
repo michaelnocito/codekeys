@@ -32,6 +32,9 @@ public static class SignalsToBeat
             [BeatPreset.Throat]      = new(60, 72, BeatScale.MajorPentatonic, "D3", new[] { BeatLayer.Pulse }),
             [BeatPreset.ThirdEye]    = new(60, 72, BeatScale.MajorPentatonic, "D3", new[] { BeatLayer.Pulse }),
             [BeatPreset.Crown]       = new(60, 72, BeatScale.MajorPentatonic, "D3", new[] { BeatLayer.Pulse }),
+            // Space Clearing — faster pacing (72-84 BPM) so the bowl rings sweep through the room
+            // with more motion; 432 Hz bowl ("universe vibration", widely cited for space cleansing).
+            [BeatPreset.SpaceClearing] = new(72, 84, BeatScale.MajorPentatonic, "D3", new[] { BeatLayer.Pulse }),
         };
 
     /// <summary>Deterministically derive a beat from typing signals and a mood preset.</summary>
@@ -129,13 +132,14 @@ public static class SignalsToBeat
     /// </summary>
     public static double? ChakraBowlFreq(BeatPreset preset) => preset switch
     {
-        BeatPreset.Root        => 396.0,
-        BeatPreset.Sacral      => 417.0,
-        BeatPreset.SolarPlexus => 528.0,
-        BeatPreset.Heart       => 639.0,
-        BeatPreset.Throat      => 741.0,
-        BeatPreset.ThirdEye    => 852.0,
-        BeatPreset.Crown       => 963.0,
+        BeatPreset.Root          => 396.0,
+        BeatPreset.Sacral        => 417.0,
+        BeatPreset.SolarPlexus   => 528.0,
+        BeatPreset.Heart         => 639.0,
+        BeatPreset.Throat        => 741.0,
+        BeatPreset.ThirdEye      => 852.0,
+        BeatPreset.Crown         => 963.0,
+        BeatPreset.SpaceClearing => 432.0,  // "universe vibration" / healing frequency for space cleansing
         _ => null,
     };
 

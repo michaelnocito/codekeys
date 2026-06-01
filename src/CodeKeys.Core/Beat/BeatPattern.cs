@@ -80,34 +80,39 @@ public static class BeatPattern
             //   pattern 4: long-bass on bar starts, mid-bass between        (leader + chorus)
             if (Has(BeatLayer.Bass))
             {
+                // ALL bowl-bearing templates (Tibetan Beat / chakras / Space Clearing) use the same
+                // musical I-I-V-I bass: long sustained bass on every bar start, with the perfect 5th
+                // on bar 2 for a grounded harmonic motion. Perfect 5th computed by interval (rootMidi
+                // + 7) so it works in any scale (Dorian / MajorPentatonic) without scale-degree
+                // gotchas. Root chakra gets a 1.25× gain boost (bass-focused grounding).
+                bool isMusicalBeat = spec.Preset == BeatPreset.Focused
+                                  || SignalsToBeat.ChakraBowlFreq(spec.Preset).HasValue;
                 bool isRootChakra = spec.Preset == BeatPreset.Root;
 
-                if (isRootChakra)
+                if (isMusicalBeat)
                 {
-                    // Root chakra "musical" bass: long sustained bass on every bar start, I-I-V-I
-                    // over 4 bars (root and PERFECT FIFTH — in MajorPentatonic the perfect 5th is
-                    // at degree 3, not degree 4 which is the 6th). Plus a soft half-bar fill on
-                    // bar 2 to lead into the harmonic motion. Sparse, dignified, grounding.
+                    int rootBassMidi  = scale.DegreeToMidi(root - 12, 0);
+                    int fifthBassMidi = (root - 12) + 7; // perfect 5th by interval
+
                     if (s % 16 == 0)
                     {
                         int barIdx = s / 16;
-                        int deg = (spec.LoopBars >= 4 && barIdx % 4 == 2) ? 3 : 0; // perfect 5th on bar 2 of 4-bar loops
-                        int baseMidi = scale.DegreeToMidi(root - 12, deg);
-                        int midi = baseMidi + LongBassOffset;
-                        double gain = accents.Contains(s) ? 0.75 : 0.65; // boosted because Root = bass-focused
+                        int midi = (spec.LoopBars >= 4 && barIdx % 4 == 2) ? fifthBassMidi : rootBassMidi;
+                        midi += LongBassOffset; // always the long-sustain variant
+                        double gain = accents.Contains(s) ? 0.65 : 0.55;
+                        if (isRootChakra) gain = Math.Min(1.0, gain * 1.25); // Root: bass-focused boost
                         hits.Add(new BeatHit(s, BeatLayer.Bass, midi, gain, swing));
                     }
                     else if (s == 40 && spec.LoopBars >= 4)
                     {
-                        // Soft half-bar fill on bar 2 (the harmonic-motion bar) — adds movement.
-                        int midi = scale.DegreeToMidi(root - 12, 3); // perfect 5th
-                        hits.Add(new BeatHit(s, BeatLayer.Bass, midi, 0.40, swing));
+                        // Half-bar fill on bar 2 — the harmonic-motion bar — adds movement.
+                        double fillGain = isRootChakra ? 0.50 : 0.40;
+                        hits.Add(new BeatHit(s, BeatLayer.Bass, fifthBassMidi, fillGain, swing));
                     }
                 }
                 else
                 {
-                    // Other presets: five rotating pattern variants (steady / sparse-long /
-                    // call-and-response / root-fifth dialog / leader-+-chorus). Cycle picks one.
+                    // Dormant moods (Relaxed/Burnout/Silly): five rotating pattern variants.
                     int pattern = cycle % 5;
                     int halfIdx = (s / 8) % 2;
                     int barIdx = s / 16;
@@ -137,7 +142,6 @@ public static class BeatPattern
                         hits.Add(new BeatHit(s, BeatLayer.Bass, midi, gain, swing));
                     }
 
-                    // pattern 2: offbeat "answer" three steps past each half-bar (call-and-response).
                     if (pattern == 2 && (s == 6 || s == 22 || s == 38 || s == 54))
                     {
                         int midi = scale.DegreeToMidi(root - 12, 4);
