@@ -80,51 +80,69 @@ public static class BeatPattern
             //   pattern 4: long-bass on bar starts, mid-bass between        (leader + chorus)
             if (Has(BeatLayer.Bass))
             {
-                int pattern = cycle % 5;
-                // Root chakra: only the long-sustain patterns (1 and 4). Research-grounded: root
-                // wants "deep tones felt as much as heard, slow grounding bass." We anchor each
-                // loop in the long-lingering bass instead of the lighter half-bar patterns.
                 bool isRootChakra = spec.Preset == BeatPreset.Root;
-                if (isRootChakra) pattern = (cycle % 2 == 0) ? 1 : 4;
 
-                int halfIdx = (s / 8) % 2;     // 0 = beat 1 of bar, 1 = beat 3 of bar
-                int barIdx = s / 16;
-
-                bool playHalfBar = (s % 8 == 0) && pattern switch
+                if (isRootChakra)
                 {
-                    1 => halfIdx == 0,
-                    4 => true,
-                    _ => true,
-                };
-
-                if (playHalfBar)
-                {
-                    // Note choice — root by default; pattern 3 alternates root/fifth for dialog.
-                    int deg = pattern switch
+                    // Root chakra "musical" bass: long sustained bass on every bar start, with a
+                    // I-I-V-I progression over 4 bars (same tones — root and fifth — but with a
+                    // small harmonic shift to bar 2 for musicality). Plus a soft half-bar fill on
+                    // bar 2 to lead into the harmonic motion. Sparse, dignified, grounding.
+                    if (s % 16 == 0)
                     {
-                        3 => halfIdx == 0 ? 0 : 4,
-                        _ => rng.Next() < 0.25 ? 4 : 0,
+                        int barIdx = s / 16;
+                        int deg = (spec.LoopBars >= 4 && barIdx % 4 == 2) ? 4 : 0; // fifth only on bar 2 of 4-bar loops
+                        int baseMidi = scale.DegreeToMidi(root - 12, deg);
+                        int midi = baseMidi + LongBassOffset;
+                        double gain = accents.Contains(s) ? 0.75 : 0.65; // boosted because Root = bass-focused
+                        hits.Add(new BeatHit(s, BeatLayer.Bass, midi, gain, swing));
+                    }
+                    else if (s == 40 && spec.LoopBars >= 4)
+                    {
+                        // Soft half-bar fill on bar 2 (the harmonic-motion bar) — adds movement.
+                        int midi = scale.DegreeToMidi(root - 12, 4); // fifth
+                        hits.Add(new BeatHit(s, BeatLayer.Bass, midi, 0.40, swing));
+                    }
+                }
+                else
+                {
+                    // Other presets: five rotating pattern variants (steady / sparse-long /
+                    // call-and-response / root-fifth dialog / leader-+-chorus). Cycle picks one.
+                    int pattern = cycle % 5;
+                    int halfIdx = (s / 8) % 2;
+                    int barIdx = s / 16;
+
+                    bool playHalfBar = (s % 8 == 0) && pattern switch
+                    {
+                        1 => halfIdx == 0,
+                        4 => true,
+                        _ => true,
                     };
 
-                    // Length variant — patterns 1 and 4 favour the long lingering bass on bar starts.
-                    bool useLong =
-                        (pattern == 1) ||                                 // long, sparse
-                        (pattern == 4 && s % 16 == 0) ||                  // leader on bar start
-                        (pattern == 0 && barIdx % 2 == 0 && halfIdx == 0); // occasional long on even bars
+                    if (playHalfBar)
+                    {
+                        int deg = pattern switch
+                        {
+                            3 => halfIdx == 0 ? 0 : 4,
+                            _ => rng.Next() < 0.25 ? 4 : 0,
+                        };
+                        bool useLong =
+                            (pattern == 1) ||
+                            (pattern == 4 && s % 16 == 0) ||
+                            (pattern == 0 && barIdx % 2 == 0 && halfIdx == 0);
 
-                    int baseMidi = scale.DegreeToMidi(root - 12, deg);
-                    int midi = useLong ? baseMidi + LongBassOffset : baseMidi;
-                    double gain = accents.Contains(s) ? 0.6 : (halfIdx == 0 ? 0.55 : 0.45);
-                    // Root chakra: 25 % bass boost so the grounding low end is the star of the show.
-                    if (isRootChakra) gain = Math.Min(1.0, gain * 1.25);
-                    hits.Add(new BeatHit(s, BeatLayer.Bass, midi, gain, swing));
-                }
+                        int baseMidi = scale.DegreeToMidi(root - 12, deg);
+                        int midi = useLong ? baseMidi + LongBassOffset : baseMidi;
+                        double gain = accents.Contains(s) ? 0.6 : (halfIdx == 0 ? 0.55 : 0.45);
+                        hits.Add(new BeatHit(s, BeatLayer.Bass, midi, gain, swing));
+                    }
 
-                // pattern 2: offbeat "answer" three steps past each half-bar (call-and-response).
-                if (pattern == 2 && (s == 6 || s == 22 || s == 38 || s == 54))
-                {
-                    int midi = scale.DegreeToMidi(root - 12, 4); // fifth answers the root
-                    hits.Add(new BeatHit(s, BeatLayer.Bass, midi, 0.40, 0));
+                    // pattern 2: offbeat "answer" three steps past each half-bar (call-and-response).
+                    if (pattern == 2 && (s == 6 || s == 22 || s == 38 || s == 54))
+                    {
+                        int midi = scale.DegreeToMidi(root - 12, 4);
+                        hits.Add(new BeatHit(s, BeatLayer.Bass, midi, 0.40, 0));
+                    }
                 }
             }
 
@@ -165,13 +183,14 @@ public static class BeatPattern
         // ascend → 3.5 s sustain → ~5 s noticeable trailing fade-away), then silence between
         // appearances. The spacing varies with the spec's density:
         //   dense  (up feel)   → strike every loop          (~14 s spacing → mostly appearances)
-        //   medium             → strike every other loop    (~29 s spacing → equal on/off)
-        //   sparse (calm)      → strike every 4 loops       (~58 s spacing → long silences)
+        //   medium             → strike every 2 loops       (~29 s spacing → equal on/off)
+        //   calmer (still on)  → strike every 3 loops       (~43 s — never too silent)
         // Bowl is well behind the bass — total summed peak ≈ ¼ bass — bass stars.
         if (Has(BeatLayer.Bowl))
         {
-            // density → spacing in loops. Density 0.04 → 4, density 0.85 → 1. Clamped to [1, 4].
-            int spacingLoops = Math.Max(1, (int)Math.Round(4.5 - 4.5 * spec.Density));
+            // density → spacing in loops. Density 0.04 → ~3, density 0.85 → 1. Tighter than before
+            // because Mike said it was "a little too silent" between appearances.
+            int spacingLoops = Math.Max(1, (int)Math.Round(3.0 - 2.5 * spec.Density));
             if (cycle % spacingLoops == 0)
             {
                 var chakraFreq = SignalsToBeat.ChakraBowlFreq(spec.Preset);

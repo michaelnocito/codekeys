@@ -45,37 +45,51 @@ public class ConductorTests
         Assert.True(struggling > calm);
     }
 
-    // ---- counter-active target (the heart of the design) ----
+    // ---- ride-along target (the new heart of the design) ----
 
     [Fact]
-    public void MusicalTarget_Is_Counter_Active()
+    public void MusicalTarget_Calm_Holds_At_Flow_Center()
     {
-        double overAroused = Conductor.MusicalTarget(0.95);
-        double underAroused = Conductor.MusicalTarget(0.15);
-        Assert.True(overAroused < Conductor.FlowCenter);   // too hot → aim lower (settle)
-        Assert.True(underAroused > Conductor.FlowCenter);  // too cold → aim higher (activate)
+        // Below FlowCenter: hold at the baseline — don't slow the user further.
+        Assert.Equal(Conductor.FlowCenter, Conductor.MusicalTarget(0.00), 3);
+        Assert.Equal(Conductor.FlowCenter, Conductor.MusicalTarget(0.30), 3);
         Assert.Equal(Conductor.FlowCenter, Conductor.MusicalTarget(Conductor.FlowCenter), 3);
     }
 
     [Fact]
-    public void MusicalTarget_Holds_Inside_The_Deadband()
+    public void MusicalTarget_Flow_Zone_Rides_With_The_User()
     {
-        // Small deviations (within the band) → no steering at all: the aim stays at the centre,
-        // so the pulse only guides once the user has clearly drifted.
-        Assert.Equal(Conductor.FlowCenter, Conductor.MusicalTarget(Conductor.FlowCenter + 0.10), 3);
-        Assert.Equal(Conductor.FlowCenter, Conductor.MusicalTarget(Conductor.FlowCenter - 0.10), 3);
+        // Between FlowCenter and TenseThreshold the target rises with arousal at RideGain.
+        // The user can flow into a faster pace without the beat dragging them back.
+        double atCentre = Conductor.MusicalTarget(Conductor.FlowCenter);
+        double aboveCentre = Conductor.MusicalTarget(Conductor.FlowCenter + 0.10);
+        double atThreshold = Conductor.MusicalTarget(Conductor.TenseThreshold);
+        Assert.True(aboveCentre > atCentre);
+        Assert.True(atThreshold > aboveCentre); // higher arousal → higher target across the flow zone
+        Assert.True(atThreshold < Conductor.TenseThreshold); // but always below the user (ride, not match)
     }
 
     [Fact]
-    public void MusicalTarget_Decreases_As_User_Arousal_Rises()
+    public void MusicalTarget_Tense_Zone_Brings_The_User_Back()
     {
-        double prev = double.MaxValue;
-        for (double a = 0.0; a <= 1.0; a += 0.1)
-        {
-            double t = Conductor.MusicalTarget(a);
-            Assert.True(t <= prev + 1e-9);
-            prev = t;
-        }
+        // Past TenseThreshold the target curves back down — counter-active only when really tense.
+        double atThreshold = Conductor.MusicalTarget(Conductor.TenseThreshold);
+        double frantic = Conductor.MusicalTarget(1.00);
+        Assert.True(frantic < atThreshold);
+        Assert.True(frantic < Conductor.FlowCenter); // very tense → aim well below baseline
+    }
+
+    [Fact]
+    public void MusicalTarget_Has_No_Discontinuity_At_Zone_Boundaries()
+    {
+        // Target should be continuous at FlowCenter and TenseThreshold (no abrupt jumps).
+        double atFc        = Conductor.MusicalTarget(Conductor.FlowCenter);
+        double justAboveFc = Conductor.MusicalTarget(Conductor.FlowCenter + 1e-6);
+        Assert.Equal(atFc, justAboveFc, 3);
+
+        double atTt        = Conductor.MusicalTarget(Conductor.TenseThreshold);
+        double justAboveTt = Conductor.MusicalTarget(Conductor.TenseThreshold + 1e-6);
+        Assert.Equal(atTt, justAboveTt, 3);
     }
 
     // ---- gentle, rate-limited stepping ----

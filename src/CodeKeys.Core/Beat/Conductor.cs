@@ -18,14 +18,17 @@ namespace CodeKeys.Core.Beat;
 public static class Conductor
 {
     // ---- tunables (expected to be tuned by ear) ----
-    // Philosophy: this is a BACKGROUND pulse. It holds steady and only guides when it's really sure
-    // the user has drifted — the user is doing another task, so we create space, we don't compete.
-    // The resting/flow ANCHOR. Maps to ~66 BPM in the Focused range — squarely inside the
-    // 60–80 BPM "relaxed-focus" band the research favours. Over- or under-stimulation is always
-    // steered back toward this point (see MusicalTarget): it's the home the pulse returns to.
-    public const double FlowCenter = 0.5;
-    public const double LeadGain   = 0.25;   // how hard we steer back — low, so any guidance is gentle
-    public const double Deadband   = 0.18;   // only react once the user is CLEARLY outside this band
+    // Philosophy: this is a BACKGROUND pulse that wants to RIDE WITH the user, not corral them.
+    // - Below FlowCenter (calm): hold steady at the baseline easy-flow tempo. Don't slow them down further.
+    // - Between FlowCenter and TenseThreshold (flow zone): ride along with them at a fraction of
+    //   their energy — they speed up, the beat picks up a touch, but never matches them 1:1.
+    // - Above TenseThreshold (clearly tense): NOW counter-act and ease them back down.
+    // The baseline FlowCenter maps to ~66 BPM in the Focused range — inside the research-supported
+    // 60–80 BPM "relaxed-focus" band — and is the home the pulse returns to when the user is calm.
+    public const double FlowCenter      = 0.5;
+    public const double TenseThreshold  = 0.75;  // arousal above this = "really tense"; counter-act kicks in
+    public const double RideGain        = 0.40;  // in flow zone, beat tracks arousal at this fraction (rides along)
+    public const double LeadGain        = 0.40;  // how hard we counter-act once tense
     public const double ArousalMin = 0.20;   // never fully dead
     public const double ArousalMax = 0.85;   // never frantic
     public const double SlewPerSec = 0.004;  // max arousal change per second (very gentle ramp)
@@ -73,16 +76,26 @@ public static class Conductor
     }
 
     /// <summary>
-    /// The arousal the music should aim for given the user's: a counter-active reflection about the
-    /// flow centre — over-aroused → aim lower (settle), under-aroused → aim higher (activate). Inside
-    /// the <see cref="Deadband"/> we don't react at all (aim = centre / hold), so the pulse only
-    /// guides once the user has clearly drifted; the response then ramps in from the band edge.
+    /// The arousal the music should aim for given the user's. Three zones:
+    ///  • Calm (≤ <see cref="FlowCenter"/>): hold steady at FlowCenter — don't slow them down further.
+    ///  • Flow (FlowCenter .. <see cref="TenseThreshold"/>): RIDE ALONG at <see cref="RideGain"/>
+    ///    of the deviation — the music lifts with the user but stays calmer than them, so you can
+    ///    flow into a faster pace without the beat pulling you back.
+    ///  • Tense (&gt; TenseThreshold): NOW counter-act — pull the target back down at
+    ///    <see cref="LeadGain"/>, accelerating as the user pushes further.
     /// </summary>
     public static double MusicalTarget(double userArousal)
     {
-        double dev = userArousal - FlowCenter;
-        double beyond = Math.Abs(dev) <= Deadband ? 0.0 : dev - Math.Sign(dev) * Deadband;
-        return Clamp(FlowCenter - LeadGain * beyond, ArousalMin, ArousalMax);
+        if (userArousal <= FlowCenter)
+            return FlowCenter; // calm: hold the baseline easy flow
+
+        if (userArousal <= TenseThreshold)
+            return Clamp(FlowCenter + RideGain * (userArousal - FlowCenter), ArousalMin, ArousalMax);
+
+        // Tense — start from the top of the ride-along range and curve back down with arousal.
+        double rideTop = FlowCenter + RideGain * (TenseThreshold - FlowCenter);
+        double overage = userArousal - TenseThreshold;
+        return Clamp(rideTop - 2.0 * LeadGain * overage, ArousalMin, ArousalMax);
     }
 
     /// <summary>
