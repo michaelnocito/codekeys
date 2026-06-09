@@ -56,6 +56,81 @@ public static class AmbientBedFactory
         return buf;
     }
 
+    /// <summary>
+    /// Flat-spectrum white noise — the research-backed focus bed texture (paired with isochronic tone).
+    /// Gain intentionally kept low (0.28) so it sits under the beat without masking keystrokes.
+    /// </summary>
+    public static SampleBuffer WhiteNoise(int sampleRate, double seconds = 8.0, double crossfade = 0.75, int seed = 17)
+    {
+        var rng = new Random(seed);
+        int raw = (int)((seconds + crossfade) * sampleRate);
+        var s = new float[raw];
+        for (int i = 0; i < raw; i++)
+            s[i] = (float)(rng.NextDouble() * 2.0 - 1.0);
+        var loop = MakeSeamless(s, sampleRate, crossfade);
+        var buf = new SampleBuffer(loop, sampleRate);
+        buf.NormalizeInPlace(0.28f);
+        return buf;
+    }
+
+    /// <summary>
+    /// 40 Hz isochronic tone: a 340 Hz carrier amplitude-modulated at 40 Hz using a raised-cosine
+    /// pulse (50% duty, smooth on/off to avoid clicks at the switching boundary).
+    ///
+    /// Research basis: 40 Hz gamma binaural beats with a 340 Hz carrier + white noise background
+    /// improved sustained attention performance vs. pure-tone control (p = 0.002, n = 64,
+    /// within-subjects crossover, Scientific Reports 2025, PMC11799511). This engine is mono,
+    /// so we use isochronic modulation (monaural — works on speakers and headphones alike) rather
+    /// than the stereo-only binaural variant studied. The carrier and modulation frequency are the
+    /// same; only the delivery mechanism differs.
+    ///
+    /// Keep the output gain very low (~0.10) — this is a subliminal neurological background layer,
+    /// not a foreground musical element.
+    /// </summary>
+    public static SampleBuffer IsochronicTone(int sampleRate, double seconds = 8.0, double crossfade = 0.75)
+    {
+        // 40 Hz period = 25 ms. Each pulse: 50% duty = 12.5 ms on, 12.5 ms off.
+        // Raised-cosine taper on the leading and trailing 20% of the ON window.
+        const double carrierHz = 340.0;
+        const double isoHz = 40.0;
+
+        int raw = (int)((seconds + crossfade) * sampleRate);
+        var s = new float[raw];
+
+        for (int i = 0; i < raw; i++)
+        {
+            double t = i / (double)sampleRate;
+            double carrier = Math.Sin(2.0 * Math.PI * carrierHz * t);
+
+            // Phase within one 40 Hz cycle, 0..1
+            double isoPhase = (t * isoHz) % 1.0;
+
+            double env;
+            if (isoPhase < 0.5)
+            {
+                // ON half: cosine taper in (0..0.2) and out (0.8..1.0) of the ON window.
+                double half = isoPhase / 0.5; // 0..1 within the ON half
+                if (half < 0.2)
+                    env = 0.5 * (1.0 - Math.Cos(Math.PI * half / 0.2));
+                else if (half > 0.8)
+                    env = 0.5 * (1.0 - Math.Cos(Math.PI * (1.0 - half) / 0.2));
+                else
+                    env = 1.0;
+            }
+            else
+            {
+                env = 0.0; // OFF half — silence between pulses
+            }
+
+            s[i] = (float)(carrier * env);
+        }
+
+        var loop = MakeSeamless(s, sampleRate, crossfade);
+        var buf = new SampleBuffer(loop, sampleRate);
+        buf.NormalizeInPlace(0.10f); // subliminal — stays well behind keystrokes and the beat
+        return buf;
+    }
+
     /// <summary>A gentle steady rain texture: high-passed white noise with soft droplet amplitude bursts.</summary>
     public static SampleBuffer Rain(int sampleRate, double seconds = 8.0, double crossfade = 0.75, int seed = 11)
     {

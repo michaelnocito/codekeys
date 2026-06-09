@@ -73,6 +73,7 @@ Each template sets a root note, scale, tuning, and tonal character. The keystrok
 | **Crown** | 963 Hz · airy, overtone-rich |
 | **Space Clearing** | 432 Hz · broad sweep, full-range bowl |
 | **Chakra Sweep** | 21-minute guided journey — the bowl slowly climbs through all seven tunings |
+| **Focus** | 40 Hz isochronic tone (340 Hz carrier, AM-modulated) + white noise floor · based on a 2025 Scientific Reports study (n=64) that found 40 Hz + white noise improved sustained attention vs. control (p=0.002) · steady 60–68 BPM Dorian groove underneath · works on speakers and headphones |
 
 ---
 

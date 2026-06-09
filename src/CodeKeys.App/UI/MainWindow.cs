@@ -266,6 +266,7 @@ public sealed class MainWindow : Form
             new ChakraOption(BeatPreset.Crown,         "Crown chakra  ·  963 Hz"),
             new ChakraOption(BeatPreset.SpaceClearing, "Space Clearing  ·  432 Hz"),
             new ChakraOption(BeatPreset.ChakraSweep,   "Chakra Sweep  ·  21 min  ·  Root → Crown"),
+            new ChakraOption(BeatPreset.Focus,         "Focus  ·  40 Hz isochronic  ·  340 Hz carrier"),
         });
         _chakraPicker.SelectedIndex = 0; // Root chakra (default)
         _chakraPicker.SelectedIndexChanged += OnChakraChanged;
