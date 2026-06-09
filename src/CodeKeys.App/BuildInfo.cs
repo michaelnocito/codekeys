@@ -3,7 +3,7 @@ namespace CodeKeys.App;
 /// <summary>Visible build identity — shown in the test window now and the About dialog later.</summary>
 public static class BuildInfo
 {
-    public const string Version = "0.1.0-dev";
+    public const string Version = "1.0.0";
 
     /// <summary>Build stamp taken from the executable's last-write time (UTC).</summary>
     public static string BuildStamp

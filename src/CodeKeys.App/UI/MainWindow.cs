@@ -39,6 +39,7 @@ public sealed class MainWindow : Form
     private ComboBox _voicePicker = null!;
     private ComboBox _chakraPicker = null!;
     private Label _status = null!;
+    private Button _updateBtn = null!;
 
     // ---- palette (matches the site) ----
     private static readonly Color Charcoal = Color.FromArgb(28, 28, 30);
@@ -135,10 +136,56 @@ public sealed class MainWindow : Form
         _ => $"key {vk}"
     };
 
+    private async void OnCheckForUpdates(object? sender, EventArgs e)
+    {
+        _updateBtn.Enabled = false;
+        _updateBtn.Text = "Checking…";
+        try
+        {
+            var info = await UpdaterService.CheckAsync();
+            if (info is null)
+            {
+                _updateBtn.Text = "Up to date ✓";
+                await Task.Delay(2500);
+                _updateBtn.Text = "Check for Updates";
+                _updateBtn.Enabled = true;
+                return;
+            }
+
+            var notes = string.IsNullOrWhiteSpace(info.Notes)
+                ? ""
+                : $"\n\nWhat's new:\n{info.Notes.Trim()}";
+            var result = MessageBox.Show(
+                $"Version {info.Version} is available.{notes}\n\nDownload and restart now?",
+                "Update Available",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Information);
+
+            if (result != DialogResult.Yes)
+            {
+                _updateBtn.Text = "Check for Updates";
+                _updateBtn.Enabled = true;
+                return;
+            }
+
+            var progress = new Progress<int>(pct =>
+            {
+                _updateBtn.Text = $"Downloading… {pct}%";
+            });
+            await UpdaterService.DownloadAndApplyAsync(info, progress);
+        }
+        catch (Exception ex)
+        {
+            _updateBtn.Text = "Check for Updates";
+            _updateBtn.Enabled = true;
+            MessageBox.Show($"Update check failed: {ex.Message}", "Update", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+        }
+    }
+
     private void BuildUi()
     {
         Text = "Bowl Bass Keys";
-        ClientSize = new Size(404, 864);
+        ClientSize = new Size(404, 924);
         StartPosition = FormStartPosition.CenterScreen;
         Font = new Font("Segoe UI", 9.5f);
         MaximizeBox = false;
@@ -266,6 +313,21 @@ public sealed class MainWindow : Form
         restart.Click += (_, _) => _beat.Reset();
         Controls.Add(restart);
 
+        // ---- update button ----
+        _updateBtn = new Button
+        {
+            Text = "Check for Updates",
+            FlatStyle = FlatStyle.Flat,
+            Font = new Font("Segoe UI", 9.5f),
+            ForeColor = Accent,
+            BackColor = Color.White,
+            Left = CardX, Top = 826, Width = CardW, Height = 42,
+        };
+        _updateBtn.FlatAppearance.BorderColor = Color.FromArgb(225, 225, 232);
+        _updateBtn.FlatAppearance.MouseOverBackColor = Color.FromArgb(245, 248, 253);
+        _updateBtn.Click += OnCheckForUpdates;
+        Controls.Add(_updateBtn);
+
         // ---- footer ----
         Controls.Add(new Label
         {
@@ -273,7 +335,7 @@ public sealed class MainWindow : Form
             Font = new Font("Segoe UI", 8.5f),
             ForeColor = Gray,
             AutoSize = false, TextAlign = ContentAlignment.MiddleCenter,
-            Left = CardX, Top = 826, Width = CardW, Height = 16,
+            Left = CardX, Top = 880, Width = CardW, Height = 16,
         });
         Controls.Add(new Label
         {
@@ -281,7 +343,7 @@ public sealed class MainWindow : Form
             Font = new Font("Segoe UI", 8f),
             ForeColor = Color.FromArgb(170, 170, 178),
             AutoSize = false, TextAlign = ContentAlignment.MiddleCenter,
-            Left = CardX, Top = 844, Width = CardW, Height = 14,
+            Left = CardX, Top = 898, Width = CardW, Height = 14,
         });
 
         // hidden status (keystroke-debug telemetry)
