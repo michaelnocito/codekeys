@@ -39,10 +39,6 @@ public static class SignalsToBeat
             // singing bowl is what walks up the seven chakras over the 21-minute journey (see
             // ChakraSweepStageAt); everything else stays put so only the bowl colour changes.
             [BeatPreset.ChakraSweep] = new(60, 72, BeatScale.MajorPentatonic, "D3", new[] { BeatLayer.Pulse }),
-            // Focus — steady, minimal groove: Dorian keeps it purposeful without being heavy, Pulse+Bass
-            // provide a grounding anchor without jazz swing or complexity. The real focus science comes
-            // from the isochronic overlay baked by BeatSequencer (40 Hz, 340 Hz carrier + white noise).
-            [BeatPreset.Focus] = new(60, 68, BeatScale.Dorian, "D3", new[] { BeatLayer.Pulse, BeatLayer.Bass }),
         };
 
     // ---- Chakra Sweep: a guided 21-minute walk up the seven chakras ----
@@ -179,8 +175,6 @@ public static class SignalsToBeat
         // Returning a value (rather than null) keeps the sweep on the "musical bass + bowl from t=0"
         // code path shared by every chakra template.
         BeatPreset.ChakraSweep => 396.0,
-        // Focus has no singing bowl — its tonal science is the isochronic overlay (see BeatSequencer).
-        BeatPreset.Focus => null,
         _ => null,
     };
 
@@ -207,7 +201,6 @@ public static class SignalsToBeat
         BeatPreset.Relaxed => "relaxed",
         BeatPreset.Burnout => "burnout",
         BeatPreset.Silly => "silly",
-        BeatPreset.Focus => "focus",
         _ => "focused"
     };
 }

@@ -14,14 +14,7 @@ public enum BeatPreset
     SpaceClearing,
     // Chakra Sweep — a guided 21-minute journey: the bowl walks UP the seven chakras, 3 min each
     // (Root→Crown), over a steady bass+bowl bed. The bowl frequency is time-driven, not fixed.
-    ChakraSweep,
-    // Focus — evidence-based classroom / deep-work preset. Steady 60-68 BPM Dorian groove with a
-    // continuous 40 Hz isochronic tone (340 Hz carrier, AM-modulated) baked into the ambient bed,
-    // plus a white-noise floor. Research: 40 Hz gamma + white noise improved sustained attention
-    // (p=0.002, n=64, within-subjects crossover, Scientific Reports 2025, PMC11799511).
-    // NOTE: engine is mono so these are isochronic (monaural) rather than binaural beats — works
-    // on speakers as well as headphones.
-    Focus
+    ChakraSweep
 }
 
 /// <summary>The scales a beat can use. This is the tonal source of truth key-sounds must read.</summary>

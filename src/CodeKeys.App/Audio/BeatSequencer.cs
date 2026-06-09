@@ -2,7 +2,6 @@ using CodeKeys.Core.Audio;
 using CodeKeys.Core.Beat;
 using CodeKeys.Core.Music;
 using NAudio.Wave;
-using AmbientBedFactory = CodeKeys.Core.Audio.AmbientBedFactory;
 
 namespace CodeKeys.App.Audio;
 
@@ -63,11 +62,6 @@ public sealed class BeatSequencer : ISampleProvider
     private long _loopLen = 1;
     private long _playhead;
     private int _nextIdx;
-
-    // Focus preset: pre-baked continuous overlay (40 Hz isochronic + white noise), looped independently
-    // of the BPM schedule so it never drifts or restarts with the beat pattern.
-    private float[]? _focusOverlay;
-    private int _focusOverlayPos;
 
     public BeatSequencer(int sampleRate, BeatSpec spec)
     {
@@ -242,30 +236,6 @@ public sealed class BeatSequencer : ISampleProvider
         _eventChimeMidi = scale.DegreeToMidi(root + 24, 0);
         _eventSplashMidi = scale.DegreeToMidi(root, 0);
 
-        // Focus overlay: mix white noise + 40 Hz isochronic tone into a single looped buffer.
-        // Baked once per SetSpec call; loops independently of the BPM schedule.
-        if (spec.Preset == BeatPreset.Focus)
-        {
-            // Pink noise (1/f, −3 dB/oct) as the acoustic masking texture — softer and more natural
-            // than brown (less rumble) while still masking environmental distraction.
-            // Isochronic tone must be the PRIMARY element — research shows isochronic tones need
-            // to be clearly audible to work; subliminal mixing is ineffective.
-            // Ratio: iso at ~4× the noise floor so pink doesn't compete with the groove.
-            const float noiseGain = 0.09f;  // soft texture — present but unobtrusive
-            const float isoGain   = 0.38f;  // clearly audible over the bass groove
-            var noise = AmbientBedFactory.PinkNoise(_rate, seconds: 8.0);   // gentle 1/f spectrum
-            var iso   = AmbientBedFactory.IsochronicTone(_rate, seconds: 8.0);
-            int len = Math.Min(noise.Samples.Length, iso.Samples.Length);
-            var overlay = new float[len];
-            for (int idx = 0; idx < len; idx++)
-                overlay[idx] = noise.Samples[idx] * noiseGain + iso.Samples[idx] * isoGain;
-            _focusOverlay = overlay;
-            _focusOverlayPos = 0;
-        }
-        else
-        {
-            _focusOverlay = null;
-        }
         for (int d = 0; d < span; d++)
         {
             int midi = scale.DegreeToMidi(root + 12, d);
@@ -387,13 +357,6 @@ public sealed class BeatSequencer : ISampleProvider
                 // Stacking output-gain envelopes on top of bedLevel × master made the start
                 // inaudible relative to keystrokes (~21 dB down). Volume stays at bed level the
                 // whole time so the bed is always perceptible; the cycle is felt via voicing.
-                // Mix in the Focus overlay (isochronic + white noise) if active.
-                if (_focusOverlay != null)
-                {
-                    sample += _focusOverlay[_focusOverlayPos];
-                    _focusOverlayPos = (_focusOverlayPos + 1) % _focusOverlay.Length;
-                }
-
                 buffer[offset + i] = sample;
 
                 _sessionSamples++;
