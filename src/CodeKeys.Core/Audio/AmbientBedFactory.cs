@@ -127,7 +127,7 @@ public static class AmbientBedFactory
 
         var loop = MakeSeamless(s, sampleRate, crossfade);
         var buf = new SampleBuffer(loop, sampleRate);
-        buf.NormalizeInPlace(0.10f); // subliminal — stays well behind keystrokes and the beat
+        buf.NormalizeInPlace(0.90f); // normalized cleanly; gain applied at the mix site in BeatSequencer
         return buf;
     }
 
