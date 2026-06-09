@@ -57,6 +57,39 @@ public static class AmbientBedFactory
     }
 
     /// <summary>
+    /// Pink noise (1/f spectrum, −3 dB/oct) — the perceptual sweet spot between white (too sharp)
+    /// and brown (too rumbly). Standard in focus/ADHD research and most focus apps; sounds like
+    /// a gentle, even hiss rather than a deep roar. Generated via Paul Kellet's IIR filter.
+    /// </summary>
+    public static SampleBuffer PinkNoise(int sampleRate, double seconds = 8.0, double crossfade = 0.75, int seed = 3)
+    {
+        var rng = new Random(seed);
+        int raw = (int)((seconds + crossfade) * sampleRate);
+        var s = new float[raw];
+
+        // Paul Kellet's pink-noise IIR approximation (7 poles).
+        double b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0;
+        for (int i = 0; i < raw; i++)
+        {
+            double w = rng.NextDouble() * 2.0 - 1.0;
+            b0 = 0.99886 * b0 + w * 0.0555179;
+            b1 = 0.99332 * b1 + w * 0.0750759;
+            b2 = 0.96900 * b2 + w * 0.1538520;
+            b3 = 0.86650 * b3 + w * 0.3104856;
+            b4 = 0.55000 * b4 + w * 0.5329522;
+            b5 = -0.7616 * b5 - w * 0.0168980;
+            double pink = b0 + b1 + b2 + b3 + b4 + b5 + b6 + w * 0.5362;
+            b6 = w * 0.115926;
+            s[i] = (float)(pink * 0.11); // scale before normalize
+        }
+
+        var loop = MakeSeamless(s, sampleRate, crossfade);
+        var buf = new SampleBuffer(loop, sampleRate);
+        buf.NormalizeInPlace(0.55f);
+        return buf;
+    }
+
+    /// <summary>
     /// Flat-spectrum white noise — the research-backed focus bed texture (paired with isochronic tone).
     /// Gain intentionally kept low (0.28) so it sits under the beat without masking keystrokes.
     /// </summary>

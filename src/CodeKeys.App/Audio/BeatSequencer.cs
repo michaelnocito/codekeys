@@ -246,14 +246,14 @@ public sealed class BeatSequencer : ISampleProvider
         // Baked once per SetSpec call; loops independently of the BPM schedule.
         if (spec.Preset == BeatPreset.Focus)
         {
-            // Brown noise (warm -6 dB/oct spectrum) as the acoustic masking texture.
+            // Pink noise (1/f, −3 dB/oct) as the acoustic masking texture — softer and more natural
+            // than brown (less rumble) while still masking environmental distraction.
             // Isochronic tone must be the PRIMARY element — research shows isochronic tones need
             // to be clearly audible to work; subliminal mixing is ineffective.
-            // Ratio: iso at ~3× the noise floor. Brown noise just masks environmental distraction;
-            // it should not draw attention on its own.
-            const float noiseGain = 0.13f;  // soft texture — barely there
+            // Ratio: iso at ~4× the noise floor so pink doesn't compete with the groove.
+            const float noiseGain = 0.09f;  // soft texture — present but unobtrusive
             const float isoGain   = 0.38f;  // clearly audible over the bass groove
-            var noise = AmbientBedFactory.BrownNoise(_rate, seconds: 8.0);  // warm, -6 dB/oct
+            var noise = AmbientBedFactory.PinkNoise(_rate, seconds: 8.0);   // gentle 1/f spectrum
             var iso   = AmbientBedFactory.IsochronicTone(_rate, seconds: 8.0);
             int len = Math.Min(noise.Samples.Length, iso.Samples.Length);
             var overlay = new float[len];
