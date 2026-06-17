@@ -323,10 +323,8 @@ public static class BeatPattern
         var hits = new List<BeatHit>();
         double SwingAt(int step) => (step % 2 == 1) ? spec.Swing : 0.0;
 
-        // A varied 4-bar mid-bass line over the pentatonic (degrees 0=D, 2=F#, 4=B in the bass
-        // octave): it walks instead of sitting on the root, and resolves home on the last bar.
-        int[] downDeg  = { 0, 0, 4, 2 }; // downbeat (with the kick on beat 1)
-        int[] threeDeg = { 0, 2, 2, 0 }; // beat 3 (with the kick on beat 3)
+        int rootBassMidi  = scale.DegreeToMidi(root - 12, 0);
+        int fifthBassMidi = (root - 12) + 7; // perfect 5th by interval
 
         for (int bar = 0; bar < spec.LoopBars; bar++)
         {
@@ -357,18 +355,13 @@ public static class BeatPattern
                 hits.Add(new BeatHit(b + 14, BeatLayer.Snare, GrooveSnareMidi, 0.45, 0));
             }
 
-            // Mid-bass — a sustained, varied line locked to the kicks (beats 1 & 3), plus an
-            // occasional walked passing tone so it never repeats dead. Warm sustaining timbre (baked
-            // as a triangle synth bass, not a pure-sine blip) so it sings rather than chirps.
-            int bi = bar % 4;
-            hits.Add(new BeatHit(b + 0, BeatLayer.Bass, scale.DegreeToMidi(root - 12, downDeg[bi]),  0.55, 0));
-            hits.Add(new BeatHit(b + 8, BeatLayer.Bass, scale.DegreeToMidi(root - 12, threeDeg[bi]), 0.48, 0));
-            if (rng.Next() < 0.55)
-            {
-                int pStep = (rng.Next() < 0.5) ? 6 : 14;
-                int pDeg  = new[] { 2, 4, 0 }[(int)(rng.Next() * 3)];
-                hits.Add(new BeatHit(b + pStep, BeatLayer.Bass, scale.DegreeToMidi(root - 12, pDeg), 0.32, SwingAt(b + pStep)));
-            }
+            // Bass — root locked to the downbeat kick, moving to the 5th on the 3rd beat of odd bars
+            // for a little motion, plus an occasional swung "and of 1" walk.
+            hits.Add(new BeatHit(b + 0, BeatLayer.Bass, rootBassMidi, 0.50, 0));
+            int midMidi = (bar % 2 == 1) ? fifthBassMidi : rootBassMidi;
+            hits.Add(new BeatHit(b + 8, BeatLayer.Bass, midMidi, 0.42, 0));
+            if (rng.Next() < 0.40)
+                hits.Add(new BeatHit(b + 6, BeatLayer.Bass, rootBassMidi, 0.28, SwingAt(b + 6)));
         }
 
         // Soft motif — only when the conductor has activated Melody (build > 0.50). Same call-and-
