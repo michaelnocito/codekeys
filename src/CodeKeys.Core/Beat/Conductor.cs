@@ -207,6 +207,16 @@ public static class Conductor
             return current with { Bpm = bpm, Density = density, Layers = flow.ToArray() };
         }
 
+        // Groove templates (Code Groove): a real drum kit + bass, grooving from t=0 so you can code
+        // to it immediately. A soft motif drifts in once you're settled (build > 0.50). Returns early
+        // so the atmospheric Pulse/Bass-hum logic below never runs.
+        if (SignalsToBeat.IsGroove(current.Preset))
+        {
+            var kit = new List<BeatLayer> { BeatLayer.Kick, BeatLayer.Snare, BeatLayer.Hat, BeatLayer.Bass };
+            if (build > 0.50) kit.Add(BeatLayer.Melody); // a gentle tune joins once you're in the flow
+            return current with { Bpm = bpm, Density = density, Layers = kit.ToArray() };
+        }
+
         // The deep Bass hum is the FOUNDATION — always on from t=0, because Mike loves the
         // continuous low rolling drone (the half-bar Bass hits have 2s decay, so they overlap into
         // a persistent atmospheric hum). The Pulse is the gentle accent on top (sparser). Ghost

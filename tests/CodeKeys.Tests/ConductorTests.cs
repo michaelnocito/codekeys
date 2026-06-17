@@ -347,6 +347,49 @@ public class ConductorTests
         Assert.DoesNotContain(BeatLayer.Bowl, next.Layers);
     }
 
+    // ---- Code Groove: a real drum kit, present from t=0, motif drifts in later ----
+
+    [Fact]
+    public void CodeGroove_Grooves_From_The_Start_With_Kit_And_Bass()
+    {
+        var spec = SignalsToBeat.Of(Typing(250), BeatPreset.CodeGroove);
+        var t0 = Conductor.Step(spec, 0.5, elapsedSeconds: 0, dtSeconds: 1.0, 72, 86);
+
+        Assert.Contains(BeatLayer.Kick, t0.Layers);
+        Assert.Contains(BeatLayer.Snare, t0.Layers);
+        Assert.Contains(BeatLayer.Hat, t0.Layers);
+        Assert.Contains(BeatLayer.Bass, t0.Layers);
+        // It's a groove, not the atmospheric bowl bed — no soft Pulse hum, no bowl.
+        Assert.DoesNotContain(BeatLayer.Pulse, t0.Layers);
+        Assert.DoesNotContain(BeatLayer.Bowl, t0.Layers);
+        Assert.DoesNotContain(BeatLayer.Melody, t0.Layers); // motif waits
+    }
+
+    [Fact]
+    public void CodeGroove_Motif_Drifts_In_Once_Settled()
+    {
+        var spec = SignalsToBeat.Of(Typing(250), BeatPreset.CodeGroove);
+        var t0   = Conductor.Step(spec, 0.5, elapsedSeconds: 0,   dtSeconds: 1.0, 72, 86);
+        var tMid = Conductor.Step(spec, 0.5, elapsedSeconds: 540, dtSeconds: 1.0, 72, 86);
+        Assert.DoesNotContain(BeatLayer.Melody, t0.Layers);
+        Assert.Contains(BeatLayer.Melody, tMid.Layers);
+    }
+
+    [Fact]
+    public void CodeGroove_Pattern_Places_The_Backbeat_Snare()
+    {
+        var spec = SignalsToBeat.Of(Typing(250), BeatPreset.CodeGroove);
+        var groove = Conductor.Step(spec, 0.5, elapsedSeconds: 0, dtSeconds: 1.0, 72, 86);
+        var hits = BeatPattern.Build(groove, cycle: 0);
+
+        // Backbeat snare on beats 2 (step 4) and 4 (step 12) of bar 0; kick on beat 1 (step 0).
+        Assert.Contains(hits, h => h.Layer == BeatLayer.Snare && h.Step == 4);
+        Assert.Contains(hits, h => h.Layer == BeatLayer.Snare && h.Step == 12);
+        Assert.Contains(hits, h => h.Layer == BeatLayer.Kick && h.Step == 0);
+        // Drums only — never the atmospheric Pulse sub-hum.
+        Assert.DoesNotContain(hits, h => h.Layer == BeatLayer.Pulse);
+    }
+
     [Fact]
     public void Dreamflow_Shimmer_Eases_In_With_The_Build()
     {

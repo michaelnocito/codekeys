@@ -214,6 +214,14 @@ public sealed class BeatSequencer : ISampleProvider
                 Put(BeatLayer.Pad, scale.DegreeToMidi(root - 12, baseDeg));
                 foreach (int d in new[] { 0, 2, 4 }) Put(BeatLayer.Pad, scale.DegreeToMidi(root, baseDeg + d));
             }
+        // Code Groove: bake the fixed drum-kit timbres under their sentinel bank keys (the bassline
+        // reuses the Bass pitches baked below).
+        if (SignalsToBeat.IsGroove(spec.Preset))
+        {
+            Put(BeatLayer.Kick,  BeatPattern.GrooveKickMidi);
+            Put(BeatLayer.Snare, BeatPattern.GrooveSnareMidi);
+            Put(BeatLayer.Hat,   BeatPattern.GrooveHatMidi);
+        }
         // Bake TWO Bass variants per pitch — a mid-length default (~2s) and a long lingering one
         // (~3.6s). Pitches: scale degree 0 (root), the PERFECT FIFTH (by interval, root+7 — works
         // for any scale), and scale degree 4 (dormant-pattern fallback). All three so the pattern
@@ -286,6 +294,11 @@ public sealed class BeatSequencer : ISampleProvider
                                 new Envelope { Attack = 0.002, Decay = 1.4, Sustain = 0.0, Release = 0.1 },
                                 holdSeconds: 0.0, gain: 0.40f),
             BeatLayer.Ghost => PercussionFactory.CreateTap(f, _rate, decaySeconds: 0.045, noiseAmount: 0.25),
+            // Code Groove drum kit (fixed timbres — pitch is ignored). Punchy-but-soft kick, a snappy
+            // snare/clap, and a short noisy tick that reads as a closed hi-hat.
+            BeatLayer.Kick  => PercussionFactory.CreateKick(55.0, _rate, bodyDecaySeconds: 0.22, gain: 0.90f),
+            BeatLayer.Snare => PercussionFactory.CreateSnare(_rate, decaySeconds: 0.14, gain: 0.70f),
+            BeatLayer.Hat   => PercussionFactory.CreateTap(900.0, _rate, decaySeconds: 0.03, noiseAmount: 0.6, gain: 0.50f),
             // Tibetan singing bowl: shaped as an APPEARANCE — ascends in, holds briefly, then has
             // a long noticeable fade-out trail. ~10 s total so each appearance is roughly 2 measures
             // (at 66 BPM, 2 bars ≈ 7 s) plus a graceful trailing tail. The bass is the focus; the
@@ -303,8 +316,8 @@ public sealed class BeatSequencer : ISampleProvider
     /// template breathes via the rise/fall <see cref="Conductor.CycleEnvelope"/>.
     /// </summary>
     private static double BuildAt(BeatPreset preset, double elapsed) =>
-        preset == BeatPreset.ChakraSweep
-            ? Conductor.SweepEnvelope(elapsed)
+        preset == BeatPreset.ChakraSweep || SignalsToBeat.IsGroove(preset)
+            ? Conductor.SweepEnvelope(elapsed)   // hold the groove steadily present (no breathing fade)
             : Conductor.CycleEnvelope(elapsed);
 
     /// <summary>

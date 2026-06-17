@@ -44,6 +44,11 @@ public static class SignalsToBeat
             // layers are Pad + Melody (the wash + the floating motif) — NEVER Pulse/Bass; the conductor
             // enforces this for pad-flow templates. The bowl never appears (ChakraBowlFreq returns null).
             [BeatPreset.Dreamflow] = new(56, 68, BeatScale.MajorPentatonic, "D3", new[] { BeatLayer.Pad, BeatLayer.Melody }),
+            // Code Groove — a steady lo-fi coding beat (72-86 BPM, head-nod tempo). D MajorPentatonic
+            // so it stays consonant with the calm keystroke packs. Base = the drum kit + bass; the
+            // conductor enforces the groove voices and drifts a soft motif in later.
+            [BeatPreset.CodeGroove] = new(72, 86, BeatScale.MajorPentatonic, "D3",
+                new[] { BeatLayer.Kick, BeatLayer.Snare, BeatLayer.Hat, BeatLayer.Bass }),
         };
 
     // ---- Dreamflow (pad-flow) ----
@@ -53,6 +58,13 @@ public static class SignalsToBeat
     /// conductor gives them a flowing chord-pad texture instead of the standard thump-driven bed.
     /// </summary>
     public static bool IsPadFlow(BeatPreset preset) => preset == BeatPreset.Dreamflow;
+
+    /// <summary>
+    /// "Groove" templates are real drum-kit beats (kick / snare / hat + bass) — a head-nod coding
+    /// rhythm. The conductor gives them the steady groove voices instead of the atmospheric bowl bed,
+    /// and the renderer holds them present (steady envelope) rather than breathing them to silence.
+    /// </summary>
+    public static bool IsGroove(BeatPreset preset) => preset == BeatPreset.CodeGroove;
 
     /// <summary>
     /// Dreamflow's wandering chord progression, as scale-degree roots over four bars. Unresolved,
@@ -109,8 +121,9 @@ public static class SignalsToBeat
 
         // length -> loop length
         int loopBars = sig.CharCount < 40 ? 2 : sig.CharCount < 100 ? 4 : 8;
-        // Dreamflow always rides a 4-bar loop so its 4-chord progression gets a full cycle.
-        if (IsPadFlow(preset)) loopBars = 4;
+        // Dreamflow always rides a 4-bar loop so its 4-chord progression gets a full cycle; Code
+        // Groove also rides 4 bars so it can place a fill on the last bar.
+        if (IsPadFlow(preset) || IsGroove(preset)) loopBars = 4;
         int steps = loopBars * 16;
 
         // caps + punctuation -> accents
@@ -224,6 +237,7 @@ public static class SignalsToBeat
         BeatPreset.Burnout => "burnout",
         BeatPreset.Silly => "silly",
         BeatPreset.Dreamflow => "dreamflow",
+        BeatPreset.CodeGroove => "codegroove",
         _ => "focused"
     };
 }

@@ -19,7 +19,12 @@ public enum BeatPreset
     // lush detuned pads drifting through a wandering chord progression, a soft floating motif, and
     // shimmer that eases in. The "pad-flow" templates are handled specially by the conductor so they
     // never get the standard Pulse+Bass thumps (see SignalsToBeat.IsPadFlow / Conductor.Step).
-    Dreamflow
+    Dreamflow,
+    // Code Groove — a steady lo-fi coding beat: kick on 1 & 3, snare backbeat on 2 & 4, swung
+    // eighth-note hats, a simple root/fifth bassline, and a soft motif that drifts in later. Held
+    // steadily present (not the breathing fade) so it grooves the whole work session. Handled as a
+    // "groove" template by the conductor (see SignalsToBeat.IsGroove / Conductor.Step).
+    CodeGroove
 }
 
 /// <summary>The scales a beat can use. This is the tonal source of truth key-sounds must read.</summary>
@@ -32,7 +37,9 @@ public enum BeatScale { Dorian, Major, MajorPentatonic }
 /// <see cref="Pad"/>/<see cref="Melody"/>/<see cref="Marimba"/>/<see cref="Chime"/> are kept in
 /// code but no longer used by the conductor (a chord or high tones that pulled focus).
 /// </summary>
-public enum BeatLayer { Pad, Pulse, Marimba, Melody, Chime, Bass, Splash, Ghost, Bowl }
+/// <remarks><see cref="Kick"/>/<see cref="Snare"/>/<see cref="Hat"/> are the Code Groove drum kit
+/// (a real lo-fi beat), distinct from the atmospheric <see cref="Pulse"/> sub-hum used by the bowl beds.</remarks>
+public enum BeatLayer { Pad, Pulse, Marimba, Melody, Chime, Bass, Splash, Ghost, Bowl, Kick, Snare, Hat }
 
 /// <summary>
 /// Typing telemetry captured over a session window. Fed into <see cref="SignalsToBeat"/>.

@@ -18,6 +18,13 @@ public static class BeatPattern
     /// keys both short and long under (Bass, midi) and (Bass, midi + LongBassOffset) respectively.
     /// </summary>
     public const int LongBassOffset = 1200; // 100 octaves — large + divisible by 12 so pitch class is preserved
+
+    // Sentinel bank keys for the Code Groove drum kit — the drums are fixed timbres (not scale
+    // pitches), so they're banked under these constant keys rather than a MIDI note. The renderer
+    // bakes the same keys (kick ~55 Hz body, snare noise, hat tick); kept far above any real MIDI.
+    public const int GrooveKickMidi  = 1000;
+    public const int GrooveSnareMidi = 1001;
+    public const int GrooveHatMidi   = 1002;
     /// <summary>
     /// Build the hit timeline for one loop of <paramref name="spec"/>. <paramref name="cycle"/> is
     /// the loop index — it seeds the per-loop variation, so consecutive loops differ (varying
@@ -33,6 +40,9 @@ public static class BeatPattern
     public static IReadOnlyList<BeatHit> Build(BeatSpec spec, int cycle = 0, double intensity = 1.0,
                                                int bowlMidiOverride = -1)
     {
+        // Code Groove has its own self-contained drum-kit timeline (kick/snare/hat/bass + late motif).
+        if (SignalsToBeat.IsGroove(spec.Preset)) return BuildGroove(spec, cycle, intensity);
+
         int steps = spec.LoopBars * 16;
         var scale = SignalsToBeat.ToScale(spec.Scale);
         int root = NoteUtil.ParseNoteName(spec.Root);
@@ -292,6 +302,85 @@ public static class BeatPattern
                     int s = bar * 16;
                     foreach (int deg in new[] { 0, 2, 4 })
                         hits.Add(new BeatHit(s, BeatLayer.Pad, scale.DegreeToMidi(root, deg), 0.4, 0));
+                }
+            }
+        }
+
+        return hits;
+    }
+
+    /// <summary>
+    /// Code Groove's drum-kit timeline: a steady lo-fi coding beat. Kick on 1 &amp; 3 (plus a boom-bap
+    /// syncopated kick on alternating bars), snare backbeat on 2 &amp; 4, swung eighth-note hats with a
+    /// last-bar fill, and a simple root/fifth bassline locked to the kick. A soft motif is added only
+    /// when the Melody layer is active (the conductor drifts it in once you're settled).
+    /// </summary>
+    private static IReadOnlyList<BeatHit> BuildGroove(BeatSpec spec, int cycle, double intensity)
+    {
+        var scale = SignalsToBeat.ToScale(spec.Scale);
+        int root = NoteUtil.ParseNoteName(spec.Root);
+        var rng = new Prng(Fnv.Hash($"groove|{spec.Bpm}|{spec.Root}|{spec.LoopBars}|{cycle}"));
+        var hits = new List<BeatHit>();
+        double SwingAt(int step) => (step % 2 == 1) ? spec.Swing : 0.0;
+
+        int rootBassMidi  = scale.DegreeToMidi(root - 12, 0);
+        int fifthBassMidi = (root - 12) + 7; // perfect 5th by interval
+
+        for (int bar = 0; bar < spec.LoopBars; bar++)
+        {
+            int b = bar * 16;
+
+            // Kick — beats 1 & 3, with a syncopated "and of 3" boom-bap kick on alternating bars.
+            hits.Add(new BeatHit(b + 0, BeatLayer.Kick, GrooveKickMidi, 0.90, 0));
+            hits.Add(new BeatHit(b + 8, BeatLayer.Kick, GrooveKickMidi, 0.80, 0));
+            if ((bar + cycle) % 2 == 0)
+                hits.Add(new BeatHit(b + 11, BeatLayer.Kick, GrooveKickMidi, 0.55, SwingAt(b + 11)));
+
+            // Snare — the backbeat on 2 & 4.
+            hits.Add(new BeatHit(b + 4,  BeatLayer.Snare, GrooveSnareMidi, 0.80, 0));
+            hits.Add(new BeatHit(b + 12, BeatLayer.Snare, GrooveSnareMidi, 0.80, 0));
+
+            // Hats — swung eighth notes, lighter on the offbeat.
+            for (int s = 0; s < 16; s += 2)
+            {
+                double g = (s % 4 == 0) ? 0.42 : 0.30;
+                hits.Add(new BeatHit(b + s, BeatLayer.Hat, GrooveHatMidi, g, SwingAt(b + s)));
+            }
+
+            // Last-bar fill: a quick 16th hat roll + a snare pickup into the downbeat.
+            if (bar == spec.LoopBars - 1)
+            {
+                hits.Add(new BeatHit(b + 14, BeatLayer.Hat,   GrooveHatMidi,   0.30, 0));
+                hits.Add(new BeatHit(b + 15, BeatLayer.Hat,   GrooveHatMidi,   0.36, 0));
+                hits.Add(new BeatHit(b + 14, BeatLayer.Snare, GrooveSnareMidi, 0.45, 0));
+            }
+
+            // Bass — root locked to the downbeat kick, moving to the 5th on the 3rd beat of odd bars
+            // for a little motion, plus an occasional swung "and of 1" walk.
+            hits.Add(new BeatHit(b + 0, BeatLayer.Bass, rootBassMidi, 0.50, 0));
+            int midMidi = (bar % 2 == 1) ? fifthBassMidi : rootBassMidi;
+            hits.Add(new BeatHit(b + 8, BeatLayer.Bass, midMidi, 0.42, 0));
+            if (rng.Next() < 0.40)
+                hits.Add(new BeatHit(b + 6, BeatLayer.Bass, rootBassMidi, 0.28, SwingAt(b + 6)));
+        }
+
+        // Soft motif — only when the conductor has activated Melody (build > 0.50). Same call-and-
+        // response motif as the other beds, sat well back so it colours the groove without leading.
+        if (Array.IndexOf(spec.Layers, BeatLayer.Melody) >= 0)
+        {
+            var motif  = MotifFactory.Generate(Fnv.Hash($"motif|{spec.Preset}|{spec.Scale}|{spec.Root}"), scale.Intervals.Count);
+            var answer = MotifFactory.WithResolvedEnding(motif);
+            int melodyBase = root + 12;
+            for (int bar = 0; bar < spec.LoopBars; bar++)
+            {
+                var phrase = (bar % 2 == 1) ? answer : motif;
+                int barStart = bar * 16;
+                foreach (var mn in phrase.Notes)
+                {
+                    if (intensity < 1.0 && rng.Next() >= intensity) continue; // ease in with the build
+                    int step = barStart + mn.Step;
+                    int midi = scale.DegreeToMidi(melodyBase, mn.Degree);
+                    hits.Add(new BeatHit(step, BeatLayer.Melody, midi, mn.Gain * 0.8, SwingAt(step)));
                 }
             }
         }
