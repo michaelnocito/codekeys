@@ -44,11 +44,11 @@ public static class SignalsToBeat
             // layers are Pad + Melody (the wash + the floating motif) — NEVER Pulse/Bass; the conductor
             // enforces this for pad-flow templates. The bowl never appears (ChakraBowlFreq returns null).
             [BeatPreset.Dreamflow] = new(56, 68, BeatScale.MajorPentatonic, "D3", new[] { BeatLayer.Pad, BeatLayer.Melody }),
-            // Code Groove — a slow, flowing half-time lo-fi beat (36-43 BPM — half the original
-            // tempo, for a chilled, spacious groove). D MajorPentatonic so it stays consonant with the
-            // calm keystroke packs. Base = the drum kit + bass; the conductor enforces the groove
-            // voices, breathes the tempo gently, and drifts a soft motif in later.
-            [BeatPreset.CodeGroove] = new(36, 43, BeatScale.MajorPentatonic, "D3",
+            // Code Groove — a flowing half-time lo-fi beat (45-54 BPM — chilled and spacious, but
+            // 25% livelier than the first half-time pass). D MajorPentatonic so it stays consonant with
+            // the calm keystroke packs. Base = the drum kit + a varied mid-bass; the conductor enforces
+            // the groove voices, breathes the tempo gently, and drifts a soft piano motif in later.
+            [BeatPreset.CodeGroove] = new(45, 54, BeatScale.MajorPentatonic, "D3",
                 new[] { BeatLayer.Kick, BeatLayer.Snare, BeatLayer.Hat, BeatLayer.Bass }),
         };
 

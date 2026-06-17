@@ -221,6 +221,8 @@ public sealed class BeatSequencer : ISampleProvider
             Put(BeatLayer.Kick,  BeatPattern.GrooveKickMidi);
             Put(BeatLayer.Snare, BeatPattern.GrooveSnareMidi);
             Put(BeatLayer.Hat,   BeatPattern.GrooveHatMidi);
+            // The varied mid-bass line walks degrees 0/2/4 in the bass octave — bake each.
+            foreach (int deg in new[] { 0, 2, 4 }) Put(BeatLayer.Bass, scale.DegreeToMidi(root - 12, deg));
         }
         // Bake TWO Bass variants per pitch — a mid-length default (~2s) and a long lingering one
         // (~3.6s). Pitches: scale degree 0 (root), the PERFECT FIFTH (by interval, root+7 — works
@@ -274,6 +276,13 @@ public sealed class BeatSequencer : ISampleProvider
             // flowing new-age bed). Per-note hit gains in BeatPattern keep the stacked chord in check.
             BeatLayer.Pad => SynthVoiceFactory.CreatePad(f, _rate, holdSeconds: 3.0, gain: 0.5f),
             BeatLayer.Marimba => InstrumentFactory.CreateMarimba(f, _rate),
+            // Code Groove: a warm, SUSTAINED mid-bass — a triangle synth bass (fundamental-strong with
+            // gentle harmonics) that rings for ~0.6s, so the varied bassline sings rather than chirping
+            // like the old pure-sine blip.
+            BeatLayer.Bass when SignalsToBeat.IsGroove(_spec.Preset) =>
+                                SynthVoiceFactory.CreateTone(f, _rate, Waveform.Triangle,
+                                new Envelope { Attack = 0.01, Decay = 0.22, Sustain = 0.55, Release = 0.55 },
+                                holdSeconds: 0.6, gain: 0.55f),
             // Deep low boom — pure sine, long resonant decay. Decay is overridable so we can bake a
             // short / mid / long variant per pitch for the playful "who leads how long" exchange.
             BeatLayer.Bass => SynthVoiceFactory.CreateTone(f, _rate, Waveform.Sine,
@@ -299,7 +308,7 @@ public sealed class BeatSequencer : ISampleProvider
             // wooden knock. Snare = a soft clap. Hat = an airy, high, mostly-noise tick (not pitched
             // wood) so it whispers the eighths rather than sounding like a mallet.
             BeatLayer.Kick  => PercussionFactory.CreateKick(42.0, _rate,
-                                pitchStartMultiple: 2.0, pitchDropSeconds: 0.05,
+                                pitchStartMultiple: 1.5, pitchDropSeconds: 0.04,
                                 bodyDecaySeconds: 0.40, clickAmount: 0.03, gain: 1.0f),
             BeatLayer.Snare => PercussionFactory.CreateSnare(_rate, decaySeconds: 0.14, gain: 0.70f),
             BeatLayer.Hat   => PercussionFactory.CreateTap(2600.0, _rate, decaySeconds: 0.022, noiseAmount: 0.9, gain: 0.40f),
