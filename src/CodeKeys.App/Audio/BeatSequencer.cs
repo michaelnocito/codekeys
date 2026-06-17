@@ -294,11 +294,15 @@ public sealed class BeatSequencer : ISampleProvider
                                 new Envelope { Attack = 0.002, Decay = 1.4, Sustain = 0.0, Release = 0.1 },
                                 holdSeconds: 0.0, gain: 0.40f),
             BeatLayer.Ghost => PercussionFactory.CreateTap(f, _rate, decaySeconds: 0.045, noiseAmount: 0.25),
-            // Code Groove drum kit (fixed timbres — pitch is ignored). Punchy-but-soft kick, a snappy
-            // snare/clap, and a short noisy tick that reads as a closed hi-hat.
-            BeatLayer.Kick  => PercussionFactory.CreateKick(55.0, _rate, bodyDecaySeconds: 0.22, gain: 0.90f),
+            // Code Groove drum kit (fixed timbres — pitch is ignored). The kick is a DEEP BASS THUMP:
+            // low ~42 Hz body, long round decay, gentle pitch drop and almost no click — boom, not a
+            // wooden knock. Snare = a soft clap. Hat = an airy, high, mostly-noise tick (not pitched
+            // wood) so it whispers the eighths rather than sounding like a mallet.
+            BeatLayer.Kick  => PercussionFactory.CreateKick(42.0, _rate,
+                                pitchStartMultiple: 2.0, pitchDropSeconds: 0.05,
+                                bodyDecaySeconds: 0.40, clickAmount: 0.03, gain: 1.0f),
             BeatLayer.Snare => PercussionFactory.CreateSnare(_rate, decaySeconds: 0.14, gain: 0.70f),
-            BeatLayer.Hat   => PercussionFactory.CreateTap(900.0, _rate, decaySeconds: 0.03, noiseAmount: 0.6, gain: 0.50f),
+            BeatLayer.Hat   => PercussionFactory.CreateTap(2600.0, _rate, decaySeconds: 0.022, noiseAmount: 0.9, gain: 0.40f),
             // Tibetan singing bowl: shaped as an APPEARANCE — ascends in, holds briefly, then has
             // a long noticeable fade-out trail. ~10 s total so each appearance is roughly 2 measures
             // (at 66 BPM, 2 bars ≈ 7 s) plus a graceful trailing tail. The bass is the focus; the

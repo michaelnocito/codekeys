@@ -34,6 +34,13 @@ public static class Conductor
     public const double SlewPerSec = 0.004;  // max arousal change per second (very gentle ramp)
     public const double ResponsivenessFullAt = 300; // seconds: adaptation fades IN slowly from the base beat
 
+    // Code Groove tempo "breathing": a slow, smooth (sine) swell of ± a few BPM layered on top of the
+    // arousal ride-along, so the groove ebbs and flows at musical-phrase scale instead of locking to a
+    // metronome — "well-placed tempo changes" that always stay flow-like (never a jolt). Two gentle
+    // sines at different periods so the swells land at varied, non-repetitive spots.
+    public const double GrooveTempoBreathSeconds = 140.0; // primary swell period (~2.3 min)
+    public const double GrooveTempoBreathBpm     = 3.0;   // primary swell depth (± BPM)
+
     // The slow additive build over which voices enter one at a time ("people in public adding to
     // a beat" — Steve Reich's Drumming / West African drum-circle layering). DEFAULT behaviour, not
     // an opt-in: every session starts almost silent and the texture assembles over these seconds.
@@ -214,7 +221,15 @@ public static class Conductor
         {
             var kit = new List<BeatLayer> { BeatLayer.Kick, BeatLayer.Snare, BeatLayer.Hat, BeatLayer.Bass };
             if (build > 0.50) kit.Add(BeatLayer.Melody); // a gentle tune joins once you're in the flow
-            return current with { Bpm = bpm, Density = density, Layers = kit.ToArray() };
+
+            // Well-placed, flow-like tempo movement: two slow sines (a primary swell plus a slower,
+            // shallower one at ~1.6× the period) so the groove drifts up and eases back at varied
+            // spots — gentle enough to stay in flow, but it never sits dead-on a metronome.
+            double swell = GrooveTempoBreathBpm * Math.Sin(2.0 * Math.PI * elapsedSeconds / GrooveTempoBreathSeconds)
+                         + GrooveTempoBreathBpm * 0.5 * Math.Sin(2.0 * Math.PI * elapsedSeconds / (GrooveTempoBreathSeconds * 1.6));
+            // Ramp the swell in with the build so the opening settles before it starts breathing.
+            int grooveBpm = Math.Max(1, bpm + (int)Math.Round(swell * build));
+            return current with { Bpm = grooveBpm, Density = density, Layers = kit.ToArray() };
         }
 
         // The deep Bass hum is the FOUNDATION — always on from t=0, because Mike loves the
