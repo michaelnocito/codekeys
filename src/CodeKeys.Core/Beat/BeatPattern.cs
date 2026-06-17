@@ -265,14 +265,34 @@ public static class BeatPattern
             }
         }
 
-        // Pad: a sustained root/3rd/5th chord at the top of each bar.
+        // Pad: a sustained chord at the top of each bar.
         if (Has(BeatLayer.Pad))
         {
-            for (int bar = 0; bar < spec.LoopBars; bar++)
+            if (spec.Preset == BeatPreset.Dreamflow)
             {
-                int s = bar * 16;
-                foreach (int deg in new[] { 0, 2, 4 })
-                    hits.Add(new BeatHit(s, BeatLayer.Pad, scale.DegreeToMidi(root, deg), 0.4, 0));
+                // Dreamflow: walk the wandering progression. Each bar voices a 3-note stacked-scale
+                // chord (a wash, not a strike) plus a soft sustained low root an octave down — a warm
+                // foundation that breathes under the chord, NOT a percussive thump. Long lush pads
+                // (baked via SynthVoiceFactory.CreatePad) overlap bar-to-bar into a continuous flow.
+                var prog = SignalsToBeat.DreamflowProgression;
+                for (int bar = 0; bar < spec.LoopBars; bar++)
+                {
+                    int s = bar * 16;
+                    int baseDeg = prog[bar % prog.Length];
+                    hits.Add(new BeatHit(s, BeatLayer.Pad, scale.DegreeToMidi(root - 12, baseDeg), 0.45, 0));
+                    foreach (int d in new[] { 0, 2, 4 })
+                        hits.Add(new BeatHit(s, BeatLayer.Pad, scale.DegreeToMidi(root, baseDeg + d), 0.34, 0));
+                }
+            }
+            else
+            {
+                // Other (dormant) pad moods: a static root/3rd/5th chord at the top of each bar.
+                for (int bar = 0; bar < spec.LoopBars; bar++)
+                {
+                    int s = bar * 16;
+                    foreach (int deg in new[] { 0, 2, 4 })
+                        hits.Add(new BeatHit(s, BeatLayer.Pad, scale.DegreeToMidi(root, deg), 0.4, 0));
+                }
             }
         }
 

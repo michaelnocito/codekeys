@@ -14,7 +14,12 @@ public enum BeatPreset
     SpaceClearing,
     // Chakra Sweep — a guided 21-minute journey: the bowl walks UP the seven chakras, 3 min each
     // (Root→Crown), over a steady bass+bowl bed. The bowl frequency is time-driven, not fixed.
-    ChakraSweep
+    ChakraSweep,
+    // Dreamflow — a flowing, almost-psychedelic late-90s new-age bed. NO kick, NO bass boom:
+    // lush detuned pads drifting through a wandering chord progression, a soft floating motif, and
+    // shimmer that eases in. The "pad-flow" templates are handled specially by the conductor so they
+    // never get the standard Pulse+Bass thumps (see SignalsToBeat.IsPadFlow / Conductor.Step).
+    Dreamflow
 }
 
 /// <summary>The scales a beat can use. This is the tonal source of truth key-sounds must read.</summary>

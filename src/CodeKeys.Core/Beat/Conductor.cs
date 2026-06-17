@@ -197,6 +197,16 @@ public static class Conductor
         // by the same envelope, so even within "low density" the actual hits are still gated.
         double density = Clamp(0.04 + 0.55 * build + 0.20 * next * build, 0.04, 0.85);
 
+        // Pad-flow templates (Dreamflow) are the exception: NO Pulse, NO Bass — a flowing pad wash
+        // instead of the thump-driven bed. Pads + the floating motif play from t=0; the high shimmer
+        // (Chime) eases in with the build. Returns early so none of the Pulse/Bass logic below runs.
+        if (SignalsToBeat.IsPadFlow(current.Preset))
+        {
+            var flow = new List<BeatLayer> { BeatLayer.Pad, BeatLayer.Melody };
+            if (build > 0.30) flow.Add(BeatLayer.Chime); // shimmer joins as the texture assembles
+            return current with { Bpm = bpm, Density = density, Layers = flow.ToArray() };
+        }
+
         // The deep Bass hum is the FOUNDATION — always on from t=0, because Mike loves the
         // continuous low rolling drone (the half-bar Bass hits have 2s decay, so they overlap into
         // a persistent atmospheric hum). The Pulse is the gentle accent on top (sparser). Ghost

@@ -328,6 +328,35 @@ public class ConductorTests
         Assert.Equal((60, 72), SignalsToBeat.BpmRange(BeatPreset.Focused));
     }
 
+    // ---- Dreamflow (pad-flow): a flowing pad wash, NEVER the Pulse/Bass thumps ----
+
+    [Theory]
+    [InlineData(0)]      // t=0: pads + motif, shimmer not yet in
+    [InlineData(540)]    // ~9 min: build well underway, shimmer joined
+    public void Dreamflow_Is_All_Pad_Flow_Never_Thumps(double elapsed)
+    {
+        var lo = 56; var hi = 68;
+        var spec = SignalsToBeat.Of(Typing(250), BeatPreset.Dreamflow);
+        var next = Conductor.Step(spec, userArousal: 0.5, elapsedSeconds: elapsed, dtSeconds: 1.0, lo, hi);
+
+        Assert.Contains(BeatLayer.Pad, next.Layers);
+        Assert.Contains(BeatLayer.Melody, next.Layers);
+        // The whole point of the template: no kick, no bass boom — ever.
+        Assert.DoesNotContain(BeatLayer.Pulse, next.Layers);
+        Assert.DoesNotContain(BeatLayer.Bass, next.Layers);
+        Assert.DoesNotContain(BeatLayer.Bowl, next.Layers);
+    }
+
+    [Fact]
+    public void Dreamflow_Shimmer_Eases_In_With_The_Build()
+    {
+        var spec = SignalsToBeat.Of(Typing(250), BeatPreset.Dreamflow);
+        var t0   = Conductor.Step(spec, 0.5, elapsedSeconds: 0,   dtSeconds: 1.0, 56, 68);
+        var tMid = Conductor.Step(spec, 0.5, elapsedSeconds: 540, dtSeconds: 1.0, 56, 68);
+        Assert.DoesNotContain(BeatLayer.Chime, t0.Layers);   // silent shimmer at the start
+        Assert.Contains(BeatLayer.Chime, tMid.Layers);       // joins once the texture assembles
+    }
+
     // ---- chakra presets ----
 
     [Theory]

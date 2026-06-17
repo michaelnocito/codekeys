@@ -70,8 +70,8 @@ public sealed class MainWindow : Form
         var baked = CodeKeys.Core.Presets.PresetLibrary.Default.Build(AudioEngine.InternalRate);
         _keystrokes = new KeystrokeController(baked.Map, baked.Voices, _engine);
 
-        // Default beat = Root chakra (Mike's test baseline — paired with Midnight keystrokes).
-        var spec = SignalsToBeat.Of(DefaultSignals, BeatPreset.Root);
+        // Default beat = Dreamflow (the new flowing 90s-new-age bed — first in the picker).
+        var spec = SignalsToBeat.Of(DefaultSignals, BeatPreset.Dreamflow);
         _beat = new BeatSequencer(AudioEngine.InternalRate, spec);
 
         BuildUi();
@@ -257,6 +257,7 @@ public sealed class MainWindow : Form
         };
         _chakraPicker.Items.AddRange(new object[]
         {
+            new ChakraOption(BeatPreset.Dreamflow,     "Dreamflow  ·  90s new age flow"),
             new ChakraOption(BeatPreset.Root,          "Root chakra  ·  396 Hz"),
             new ChakraOption(BeatPreset.Sacral,        "Sacral chakra  ·  417 Hz"),
             new ChakraOption(BeatPreset.SolarPlexus,   "Solar Plexus chakra  ·  528 Hz"),
@@ -267,7 +268,7 @@ public sealed class MainWindow : Form
             new ChakraOption(BeatPreset.SpaceClearing, "Space Clearing  ·  432 Hz"),
             new ChakraOption(BeatPreset.ChakraSweep,   "Chakra Sweep  ·  21 min  ·  Root → Crown"),
         });
-        _chakraPicker.SelectedIndex = 0; // Root chakra (default)
+        _chakraPicker.SelectedIndex = 0; // Dreamflow (default — the new flowing bed)
         _chakraPicker.SelectedIndexChanged += OnChakraChanged;
         template.Controls.Add(_chakraPicker);
 

@@ -204,7 +204,16 @@ public sealed class BeatSequencer : ISampleProvider
         // so a layer turning on mid-session never synthesizes on the audio thread.
         Put(BeatLayer.Pulse, root);
         Put(BeatLayer.Ghost, root + 24);
-        foreach (int deg in new[] { 0, 2, 4 }) Put(BeatLayer.Pad, scale.DegreeToMidi(root, deg));      // chord (unused)
+        foreach (int deg in new[] { 0, 2, 4 }) Put(BeatLayer.Pad, scale.DegreeToMidi(root, deg));      // chord (dormant moods)
+        // Dreamflow: pre-bake every pad pitch its wandering progression needs (a low sustained root an
+        // octave down + a 3-note stacked-scale chord, per progression degree), so a bar change just
+        // reschedules baked buffers — never synthesizes the lush pad on the audio thread.
+        if (SignalsToBeat.IsPadFlow(spec.Preset))
+            foreach (int baseDeg in SignalsToBeat.DreamflowProgression)
+            {
+                Put(BeatLayer.Pad, scale.DegreeToMidi(root - 12, baseDeg));
+                foreach (int d in new[] { 0, 2, 4 }) Put(BeatLayer.Pad, scale.DegreeToMidi(root, baseDeg + d));
+            }
         // Bake TWO Bass variants per pitch — a mid-length default (~2s) and a long lingering one
         // (~3.6s). Pitches: scale degree 0 (root), the PERFECT FIFTH (by interval, root+7 — works
         // for any scale), and scale degree 4 (dormant-pattern fallback). All three so the pattern
@@ -253,9 +262,9 @@ public sealed class BeatSequencer : ISampleProvider
             // drop, no click). Reads as a warm "hummmm" rather than a driving kick. Quieter than the
             // Bass hum, so it sits as a gentle occasional accent over the continuous low foundation.
             BeatLayer.Pulse => PercussionFactory.CreateSub(f, _rate, decaySeconds: 0.55, gain: 0.40f),
-            BeatLayer.Pad => SynthVoiceFactory.CreateTone(f, _rate, Waveform.WarmPad,
-                                new Envelope { Attack = 0.06, Decay = 0.5, Sustain = 0.6, Release = 0.9 },
-                                holdSeconds: 1.2, gain: 0.35f),
+            // Lush, detuned, long-blooming pad — overlaps bar-to-bar into a continuous wash (Dreamflow's
+            // flowing new-age bed). Per-note hit gains in BeatPattern keep the stacked chord in check.
+            BeatLayer.Pad => SynthVoiceFactory.CreatePad(f, _rate, holdSeconds: 3.0, gain: 0.5f),
             BeatLayer.Marimba => InstrumentFactory.CreateMarimba(f, _rate),
             // Deep low boom — pure sine, long resonant decay. Decay is overridable so we can bake a
             // short / mid / long variant per pitch for the playful "who leads how long" exchange.

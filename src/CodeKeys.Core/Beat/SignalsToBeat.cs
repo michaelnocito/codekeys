@@ -39,7 +39,27 @@ public static class SignalsToBeat
             // singing bowl is what walks up the seven chakras over the 21-minute journey (see
             // ChakraSweepStageAt); everything else stays put so only the bowl colour changes.
             [BeatPreset.ChakraSweep] = new(60, 72, BeatScale.MajorPentatonic, "D3", new[] { BeatLayer.Pulse }),
+            // Dreamflow — slow + flowing (56-68 BPM), D MajorPentatonic (the meditative new-age scale,
+            // and the same key the calm keystroke packs are tuned to, so keys stay consonant). Base
+            // layers are Pad + Melody (the wash + the floating motif) — NEVER Pulse/Bass; the conductor
+            // enforces this for pad-flow templates. The bowl never appears (ChakraBowlFreq returns null).
+            [BeatPreset.Dreamflow] = new(56, 68, BeatScale.MajorPentatonic, "D3", new[] { BeatLayer.Pad, BeatLayer.Melody }),
         };
+
+    // ---- Dreamflow (pad-flow) ----
+
+    /// <summary>
+    /// "Pad-flow" templates are pad/wash beds with NO percussive Pulse and NO bass boom — the
+    /// conductor gives them a flowing chord-pad texture instead of the standard thump-driven bed.
+    /// </summary>
+    public static bool IsPadFlow(BeatPreset preset) => preset == BeatPreset.Dreamflow;
+
+    /// <summary>
+    /// Dreamflow's wandering chord progression, as scale-degree roots over four bars. Unresolved,
+    /// drifting motion (the dreamy late-90s new-age feel). Shared by the pattern (which voices the
+    /// chords) and the renderer (which pre-bakes every pad pitch the progression needs).
+    /// </summary>
+    public static readonly int[] DreamflowProgression = { 0, 4, 2, 3 };
 
     // ---- Chakra Sweep: a guided 21-minute walk up the seven chakras ----
 
@@ -89,6 +109,8 @@ public static class SignalsToBeat
 
         // length -> loop length
         int loopBars = sig.CharCount < 40 ? 2 : sig.CharCount < 100 ? 4 : 8;
+        // Dreamflow always rides a 4-bar loop so its 4-chord progression gets a full cycle.
+        if (IsPadFlow(preset)) loopBars = 4;
         int steps = loopBars * 16;
 
         // caps + punctuation -> accents
@@ -201,6 +223,7 @@ public static class SignalsToBeat
         BeatPreset.Relaxed => "relaxed",
         BeatPreset.Burnout => "burnout",
         BeatPreset.Silly => "silly",
+        BeatPreset.Dreamflow => "dreamflow",
         _ => "focused"
     };
 }
