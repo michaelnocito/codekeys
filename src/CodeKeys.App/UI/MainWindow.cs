@@ -259,6 +259,7 @@ public sealed class MainWindow : Form
         {
             new ChakraOption(BeatPreset.Dreamflow,     "Dreamflow  ·  90s new age flow"),
             new ChakraOption(BeatPreset.CodeGroove,    "Code Groove  ·  lo-fi coding beat"),
+            new ChakraOption(BeatPreset.Zion,          "Zion  ·  Matrix techno"),
             new ChakraOption(BeatPreset.Root,          "Root chakra  ·  396 Hz"),
             new ChakraOption(BeatPreset.Sacral,        "Sacral chakra  ·  417 Hz"),
             new ChakraOption(BeatPreset.SolarPlexus,   "Solar Plexus chakra  ·  528 Hz"),

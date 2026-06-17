@@ -60,6 +60,12 @@ public static class Conductor
     public const double SweepRiseSeconds = 60.0;   // gentle fade-in to the held bed
     public const double SweepPlateau     = 0.72;   // steady texture level held across the journey
 
+    // Zion (Matrix techno) builds from the opening hit to a full, heavy mix relatively fast (~75 s),
+    // then holds high and driving — no breathing fade. Higher plateau than the sweep so the techno
+    // sits at full intensity once built.
+    public const double ZionRiseSeconds = 75.0;
+    public const double ZionPlateau     = 0.90;
+
     // session-arc phase boundaries, in seconds
     public const double EstablishUntil   = 120;  // 0–2 min: pad + pulse only, sparse
     public const double StatementUntil   = 360;  // 2–6 min: the melody enters
@@ -158,6 +164,16 @@ public static class Conductor
     }
 
     /// <summary>
+    /// The Zion build: ease-in (p²) over <see cref="ZionRiseSeconds"/> up to <see cref="ZionPlateau"/>,
+    /// then hold — so the techno assembles from the opening hit to a full heavy mix, then keeps driving.
+    /// </summary>
+    public static double ZionEnvelope(double elapsedSeconds)
+    {
+        double p = Clamp(elapsedSeconds / ZionRiseSeconds, 0, 1);
+        return ZionPlateau * (p * p);
+    }
+
+    /// <summary>
     /// Advance the beat one loop. Runs both the additive build (voices enter one at a time,
     /// drives note density) and the arousal thermostat (counter-steers tempo). Preserves tonal
     /// identity (preset/scale/root/loopBars) so the renderer never rebakes; only tempo, density,
@@ -221,6 +237,7 @@ public static class Conductor
         {
             var kit = new List<BeatLayer> { BeatLayer.Kick, BeatLayer.Snare, BeatLayer.Bass };
             if (build > 0.50) kit.Add(BeatLayer.Melody); // a gentle tune joins once you're in the flow
+            // (groove tempo stays steady — handled below by falling through to the return)
 
             // Well-placed, flow-like tempo movement: two slow sines (a primary swell plus a slower,
             // shallower one at ~1.6× the period) so the groove drifts up and eases back at varied
@@ -230,6 +247,21 @@ public static class Conductor
             // Ramp the swell in with the build so the opening settles before it starts breathing.
             int grooveBpm = Math.Max(1, bpm + (int)Math.Round(swell * build));
             return current with { Bpm = grooveBpm, Density = density, Layers = kit.ToArray() };
+        }
+
+        // Zion (Matrix techno): a big opening hit that BUILDS into heavy driving drums. The four-on-
+        // the-floor kick drives from t=0; as the build rises (~75 s to full) the bass, claps, tribal
+        // toms, the propelling synth and finally the offbeat hats layer in, then it holds full and
+        // driving. Returns early so the atmospheric bed logic never runs.
+        if (SignalsToBeat.IsZion(current.Preset))
+        {
+            var kit = new List<BeatLayer> { BeatLayer.Kick };  // four-on-the-floor from the start
+            if (build > 0.20) kit.Add(BeatLayer.Bass);   // thudding/rolling bass
+            if (build > 0.30) kit.Add(BeatLayer.Snare);  // clap backbeat
+            if (build > 0.40) kit.Add(BeatLayer.Tom);    // tribal toms (the Zion-cave signature)
+            if (build > 0.50) kit.Add(BeatLayer.Melody); // propelling repetitive synth
+            if (build > 0.62) kit.Add(BeatLayer.Hat);    // offbeat hats = full techno
+            return current with { Bpm = bpm, Density = density, Layers = kit.ToArray() };
         }
 
         // The deep Bass hum is the FOUNDATION — always on from t=0, because Mike loves the

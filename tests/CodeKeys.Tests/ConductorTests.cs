@@ -391,6 +391,42 @@ public class ConductorTests
         Assert.DoesNotContain(hits, h => h.Layer == BeatLayer.Hat);
     }
 
+    // ---- Zion: a big hit that builds to heavy driving techno ----
+
+    [Fact]
+    public void Zion_Kick_Drives_From_The_Start_Then_Builds_To_Full_Techno()
+    {
+        var spec = SignalsToBeat.Of(Typing(250), BeatPreset.Zion);
+        // Zion is rendered with its own fast build envelope, so feed that as the build override.
+        var t0  = Conductor.Step(spec, 0.5, 0,   1.0, 130, 140, buildOverride: Conductor.ZionEnvelope(0));
+        var tUp = Conductor.Step(spec, 0.5, 120, 1.0, 130, 140, buildOverride: Conductor.ZionEnvelope(120)); // past the ~75s build
+
+        // Four-on-the-floor kick drives from t=0; the rest layers in as it builds.
+        Assert.Contains(BeatLayer.Kick, t0.Layers);
+        Assert.DoesNotContain(BeatLayer.Hat, t0.Layers);   // hats are the last thing to join
+        // Once built it's the full heavy mix.
+        Assert.Contains(BeatLayer.Kick, tUp.Layers);
+        Assert.Contains(BeatLayer.Bass, tUp.Layers);
+        Assert.Contains(BeatLayer.Snare, tUp.Layers);
+        Assert.Contains(BeatLayer.Tom, tUp.Layers);
+        Assert.Contains(BeatLayer.Melody, tUp.Layers);
+        Assert.Contains(BeatLayer.Hat, tUp.Layers);
+    }
+
+    [Fact]
+    public void Zion_Opens_With_A_Big_Hit_And_Four_On_The_Floor()
+    {
+        var spec = SignalsToBeat.Of(Typing(250), BeatPreset.Zion);
+        var full = Conductor.Step(spec, 0.5, 120, 1.0, 130, 140, buildOverride: Conductor.ZionEnvelope(120));
+        var hits = BeatPattern.Build(full, cycle: 0);
+
+        // Four-on-the-floor: a kick on every beat of bar 0.
+        foreach (int beat in new[] { 0, 4, 8, 12 })
+            Assert.Contains(hits, h => h.Layer == BeatLayer.Kick && h.Step == beat);
+        // The big opening hit on cycle 0: a loud clap + kick stacked on the first downbeat.
+        Assert.Contains(hits, h => h.Layer == BeatLayer.Snare && h.Step == 0 && h.Gain >= 1.0);
+    }
+
     [Fact]
     public void Dreamflow_Shimmer_Eases_In_With_The_Build()
     {

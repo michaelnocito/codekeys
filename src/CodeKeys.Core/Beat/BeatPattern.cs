@@ -42,6 +42,8 @@ public static class BeatPattern
     {
         // Code Groove has its own self-contained drum-kit timeline (kick/snare/hat/bass + late motif).
         if (SignalsToBeat.IsGroove(spec.Preset)) return BuildGroove(spec, cycle, intensity);
+        // Zion has its own driving Matrix-techno timeline (big hit + heavy drums + synth).
+        if (SignalsToBeat.IsZion(spec.Preset)) return BuildZion(spec, cycle);
 
         int steps = spec.LoopBars * 16;
         var scale = SignalsToBeat.ToScale(spec.Scale);
@@ -375,6 +377,87 @@ public static class BeatPattern
                     hits.Add(new BeatHit(step, BeatLayer.Melody, midi, mn.Gain * 0.8, SwingAt(step)));
                 }
             }
+        }
+
+        return hits;
+    }
+
+    /// <summary>
+    /// Zion's driving Matrix-techno timeline: a big opening hit (cycle 0), a four-on-the-floor kick,
+    /// thudding bass with a rolling offbeat, clap backbeat, tribal toms, offbeat hats, and a propelling
+    /// repetitive synth ostinato (root/5th/octave only — hypnotic, no sudden melodic changes). Which
+    /// of these are present is decided by the conductor's build (it layers them in from the hit); this
+    /// just lays out every voice's pattern and skips any layer the build hasn't activated yet.
+    /// </summary>
+    private static IReadOnlyList<BeatHit> BuildZion(BeatSpec spec, int cycle)
+    {
+        var scale = SignalsToBeat.ToScale(spec.Scale);
+        int root = NoteUtil.ParseNoteName(spec.Root);
+        var rng = new Prng(Fnv.Hash($"zion|{spec.Bpm}|{spec.Root}|{spec.LoopBars}|{cycle}"));
+        var hits = new List<BeatHit>();
+        bool Has(BeatLayer l) => Array.IndexOf(spec.Layers, l) >= 0;
+
+        int rootBassMidi = scale.DegreeToMidi(root - 12, 0);
+        int[] tomDegs = { 0, 2, 4 };
+        int[] synthDegs = { 0, 0, 3, 0, 0, 3, 5, 3 }; // root/5th/octave ostinato (degrees 0/3/5 in pentatonic)
+        int synthBase = root + 12;
+
+        for (int bar = 0; bar < spec.LoopBars; bar++)
+        {
+            int b = bar * 16;
+
+            // Four-on-the-floor kick — the driving techno pulse (heavy), always on.
+            for (int beat = 0; beat < 16; beat += 4)
+                hits.Add(new BeatHit(b + beat, BeatLayer.Kick, GrooveKickMidi, 0.95, 0));
+
+            // Thudding bass on the beat + a rolling offbeat 8th for the techno bounce.
+            if (Has(BeatLayer.Bass))
+            {
+                hits.Add(new BeatHit(b + 0, BeatLayer.Bass, rootBassMidi, 0.55, 0));
+                hits.Add(new BeatHit(b + 8, BeatLayer.Bass, rootBassMidi, 0.52, 0));
+                foreach (int s in new[] { 2, 6, 10, 14 })
+                    hits.Add(new BeatHit(b + s, BeatLayer.Bass, rootBassMidi, 0.30, 0));
+            }
+
+            // Clap/snare backbeat on 2 & 4.
+            if (Has(BeatLayer.Snare))
+            {
+                hits.Add(new BeatHit(b + 4,  BeatLayer.Snare, GrooveSnareMidi, 0.70, 0));
+                hits.Add(new BeatHit(b + 12, BeatLayer.Snare, GrooveSnareMidi, 0.70, 0));
+            }
+
+            // Offbeat open hats — the techno "tss" on the up-beats (airy noise, not a wooden tick).
+            if (Has(BeatLayer.Hat))
+                foreach (int s in new[] { 2, 6, 10, 14 })
+                    hits.Add(new BeatHit(b + s, BeatLayer.Hat, GrooveHatMidi, 0.40, 0));
+
+            // Tribal toms — a varied, driving syncopated pattern (the Zion-cave signature).
+            if (Has(BeatLayer.Tom))
+            {
+                foreach (int s in new[] { 6, 10, 11, 14 })
+                    if (rng.Next() < 0.70)
+                    {
+                        int deg = tomDegs[(int)(rng.Next() * tomDegs.Length)];
+                        hits.Add(new BeatHit(b + s, BeatLayer.Tom, scale.DegreeToMidi(root, deg), 0.60, 0));
+                    }
+                // a tom roll into the downbeat on the last bar
+                if (bar == spec.LoopBars - 1)
+                    foreach (int s in new[] { 13, 14, 15 })
+                        hits.Add(new BeatHit(b + s, BeatLayer.Tom, scale.DegreeToMidi(root, 0), 0.50, 0));
+            }
+
+            // Propelling synth — a repetitive hypnotic 8th-note ostinato (no sudden melodic changes).
+            if (Has(BeatLayer.Melody))
+                for (int i = 0; i < 8; i++)
+                    hits.Add(new BeatHit(b + i * 2, BeatLayer.Melody,
+                                         scale.DegreeToMidi(synthBase, synthDegs[i]), 0.30, 0));
+        }
+
+        // The big opening hit — a loud crash (clap) + kick on the very first downbeat.
+        if (cycle == 0)
+        {
+            hits.Add(new BeatHit(0, BeatLayer.Snare, GrooveSnareMidi, 1.0, 0));
+            hits.Add(new BeatHit(0, BeatLayer.Kick,  GrooveKickMidi,  1.0, 0));
         }
 
         return hits;

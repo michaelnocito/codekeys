@@ -222,6 +222,15 @@ public sealed class BeatSequencer : ISampleProvider
             Put(BeatLayer.Snare, BeatPattern.GrooveSnareMidi);
             // (No hi-hat — removed; it read as a metronome mallet.)
         }
+        // Zion: the techno kit + tribal toms (the kick/snare/hat reuse the sentinel keys; bass + synth
+        // reuse the Bass/Melody pitches baked above, voiced as saws by the Bake() Zion branch).
+        if (SignalsToBeat.IsZion(spec.Preset))
+        {
+            Put(BeatLayer.Kick,  BeatPattern.GrooveKickMidi);
+            Put(BeatLayer.Snare, BeatPattern.GrooveSnareMidi);
+            Put(BeatLayer.Hat,   BeatPattern.GrooveHatMidi);
+            foreach (int deg in new[] { 0, 2, 4 }) Put(BeatLayer.Tom, scale.DegreeToMidi(root, deg));
+        }
         // Bake TWO Bass variants per pitch — a mid-length default (~2s) and a long lingering one
         // (~3.6s). Pitches: scale degree 0 (root), the PERFECT FIFTH (by interval, root+7 — works
         // for any scale), and scale degree 4 (dormant-pattern fallback). All three so the pattern
@@ -274,6 +283,11 @@ public sealed class BeatSequencer : ISampleProvider
             // flowing new-age bed). Per-note hit gains in BeatPattern keep the stacked chord in check.
             BeatLayer.Pad => SynthVoiceFactory.CreatePad(f, _rate, holdSeconds: 3.0, gain: 0.5f),
             BeatLayer.Marimba => InstrumentFactory.CreateMarimba(f, _rate),
+            // Zion: a driving techno saw bass — aggressive, punchy, short — the "thudding bass".
+            BeatLayer.Bass when SignalsToBeat.IsZion(_spec.Preset) =>
+                                SynthVoiceFactory.CreateTone(f, _rate, Waveform.Saw,
+                                new Envelope { Attack = 0.004, Decay = 0.16, Sustain = 0.25, Release = 0.08 },
+                                holdSeconds: 0.04, gain: 0.45f),
             // Deep low boom — pure sine, long resonant decay. Decay is overridable so we can bake a
             // short / mid / long variant per pitch for the playful "who leads how long" exchange.
             BeatLayer.Bass => SynthVoiceFactory.CreateTone(f, _rate, Waveform.Sine,
@@ -284,6 +298,11 @@ public sealed class BeatSequencer : ISampleProvider
             BeatLayer.Splash => SynthVoiceFactory.CreateTone(f, _rate, Waveform.WarmPad,
                                 new Envelope { Attack = 0.05, Decay = 0.5, Sustain = 0.3, Release = 0.6 },
                                 holdSeconds: 0.25, gain: 0.32f),
+            // Zion: the propelling synth — a bright, short saw stab driving the repetitive ostinato.
+            BeatLayer.Melody when SignalsToBeat.IsZion(_spec.Preset) =>
+                                SynthVoiceFactory.CreateTone(f, _rate, Waveform.Saw,
+                                new Envelope { Attack = 0.004, Decay = 0.10, Sustain = 0.45, Release = 0.12 },
+                                holdSeconds: 0.06, gain: 0.30f),
             // Soft, ambient melody — gentle fade-in + long tail so it floats behind the work instead
             // of plucking to the front (same WarmPad tone Mike likes, just sat well back).
             BeatLayer.Melody => SynthVoiceFactory.CreateTone(f, _rate, Waveform.WarmPad,
@@ -298,11 +317,25 @@ public sealed class BeatSequencer : ISampleProvider
             // low ~42 Hz body, long round decay, gentle pitch drop and almost no click — boom, not a
             // wooden knock. Snare = a soft clap. Hat = an airy, high, mostly-noise tick (not pitched
             // wood) so it whispers the eighths rather than sounding like a mallet.
+            // Zion: a punchy, tight techno kick (more click/attack, shorter body) for the four-on-the-floor.
+            BeatLayer.Kick when SignalsToBeat.IsZion(_spec.Preset) =>
+                                PercussionFactory.CreateKick(50.0, _rate,
+                                pitchStartMultiple: 2.5, pitchDropSeconds: 0.025,
+                                bodyDecaySeconds: 0.16, clickAmount: 0.28, gain: 1.0f),
             BeatLayer.Kick  => PercussionFactory.CreateKick(42.0, _rate,
                                 pitchStartMultiple: 2.0, pitchDropSeconds: 0.05,
                                 bodyDecaySeconds: 0.40, clickAmount: 0.03, gain: 1.0f),
             BeatLayer.Snare => PercussionFactory.CreateSnare(_rate, decaySeconds: 0.14, gain: 0.70f),
+            // Zion: an airy noise hi-hat (filtered noise, no pitched tone) — the techno "tss", NOT a
+            // wooden tick. Used only on the off-beats.
+            BeatLayer.Hat when SignalsToBeat.IsZion(_spec.Preset) =>
+                                PercussionFactory.CreateSnare(_rate, decaySeconds: 0.05, toneAmount: 0.0, gain: 0.45f),
             BeatLayer.Hat   => PercussionFactory.CreateTap(2600.0, _rate, decaySeconds: 0.022, noiseAmount: 0.9, gain: 0.40f),
+            // Tribal tom — a pitched drum (a kick with a higher body + slower pitch drop), for the
+            // Zion-cave tribal pattern.
+            BeatLayer.Tom => PercussionFactory.CreateKick(f, _rate,
+                                pitchStartMultiple: 1.8, pitchDropSeconds: 0.05,
+                                bodyDecaySeconds: 0.14, clickAmount: 0.06, gain: 0.85f),
             // Tibetan singing bowl: shaped as an APPEARANCE — ascends in, holds briefly, then has
             // a long noticeable fade-out trail. ~10 s total so each appearance is roughly 2 measures
             // (at 66 BPM, 2 bars ≈ 7 s) plus a graceful trailing tail. The bass is the focus; the
@@ -320,7 +353,9 @@ public sealed class BeatSequencer : ISampleProvider
     /// template breathes via the rise/fall <see cref="Conductor.CycleEnvelope"/>.
     /// </summary>
     private static double BuildAt(BeatPreset preset, double elapsed) =>
-        preset == BeatPreset.ChakraSweep || SignalsToBeat.IsGroove(preset)
+        SignalsToBeat.IsZion(preset)
+            ? Conductor.ZionEnvelope(elapsed)    // fast build from the opening hit, then hold driving
+        : preset == BeatPreset.ChakraSweep || SignalsToBeat.IsGroove(preset)
             ? Conductor.SweepEnvelope(elapsed)   // hold the groove steadily present (no breathing fade)
             : Conductor.CycleEnvelope(elapsed);
 

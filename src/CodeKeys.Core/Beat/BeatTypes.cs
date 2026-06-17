@@ -24,7 +24,12 @@ public enum BeatPreset
     // eighth-note hats, a simple root/fifth bassline, and a soft motif that drifts in later. Held
     // steadily present (not the breathing fade) so it grooves the whole work session. Handled as a
     // "groove" template by the conductor (see SignalsToBeat.IsGroove / Conductor.Step).
-    CodeGroove
+    CodeGroove,
+    // Zion — a Matrix-rave driving techno bed (Fluke "Zion"): a big opening hit that builds to heavy
+    // drums — four-on-the-floor kick, thudding rolling bass, tribal toms, a propelling repetitive
+    // synth and offbeat hats. Hypnotic + repetitive (good for deep-focus flow), held driving once
+    // built. Handled as a "techno" template by the conductor (see SignalsToBeat.IsZion).
+    Zion
 }
 
 /// <summary>The scales a beat can use. This is the tonal source of truth key-sounds must read.</summary>
@@ -37,9 +42,10 @@ public enum BeatScale { Dorian, Major, MajorPentatonic }
 /// <see cref="Pad"/>/<see cref="Melody"/>/<see cref="Marimba"/>/<see cref="Chime"/> are kept in
 /// code but no longer used by the conductor (a chord or high tones that pulled focus).
 /// </summary>
-/// <remarks><see cref="Kick"/>/<see cref="Snare"/>/<see cref="Hat"/> are the Code Groove drum kit
-/// (a real lo-fi beat), distinct from the atmospheric <see cref="Pulse"/> sub-hum used by the bowl beds.</remarks>
-public enum BeatLayer { Pad, Pulse, Marimba, Melody, Chime, Bass, Splash, Ghost, Bowl, Kick, Snare, Hat }
+/// <remarks><see cref="Kick"/>/<see cref="Snare"/>/<see cref="Hat"/> are the drum kit (Code Groove +
+/// Zion), distinct from the atmospheric <see cref="Pulse"/> sub-hum used by the bowl beds.
+/// <see cref="Tom"/> is the tribal tom used by the Zion Matrix-techno bed.</remarks>
+public enum BeatLayer { Pad, Pulse, Marimba, Melody, Chime, Bass, Splash, Ghost, Bowl, Kick, Snare, Hat, Tom }
 
 /// <summary>
 /// Typing telemetry captured over a session window. Fed into <see cref="SignalsToBeat"/>.

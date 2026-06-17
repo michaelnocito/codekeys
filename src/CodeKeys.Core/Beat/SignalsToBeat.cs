@@ -50,6 +50,11 @@ public static class SignalsToBeat
             // voices, breathes the tempo gently, and drifts a soft motif in later.
             [BeatPreset.CodeGroove] = new(36, 43, BeatScale.MajorPentatonic, "D3",
                 new[] { BeatLayer.Kick, BeatLayer.Snare, BeatLayer.Bass }),
+            // Zion — driving Matrix-rave techno (130-140 BPM). D MajorPentatonic so it's consonant
+            // with the key packs, but the bass/synth ride root/5th/octave intervals so it reads modal
+            // and driving (not "happy"). The conductor builds the heavy-drum kit up from a big hit.
+            [BeatPreset.Zion] = new(130, 140, BeatScale.MajorPentatonic, "D3",
+                new[] { BeatLayer.Kick, BeatLayer.Bass }),
         };
 
     // ---- Dreamflow (pad-flow) ----
@@ -66,6 +71,13 @@ public static class SignalsToBeat
     /// and the renderer holds them present (steady envelope) rather than breathing them to silence.
     /// </summary>
     public static bool IsGroove(BeatPreset preset) => preset == BeatPreset.CodeGroove;
+
+    /// <summary>
+    /// The Zion (Matrix-techno) template: a big opening hit building to heavy driving drums — four-
+    /// on-the-floor kick, thudding bass, tribal toms, a propelling repetitive synth and offbeat hats.
+    /// Held driving (steady envelope) and built up from the hit by the conductor.
+    /// </summary>
+    public static bool IsZion(BeatPreset preset) => preset == BeatPreset.Zion;
 
     /// <summary>
     /// Dreamflow's wandering chord progression, as scale-degree roots over four bars. Unresolved,
@@ -123,8 +135,8 @@ public static class SignalsToBeat
         // length -> loop length
         int loopBars = sig.CharCount < 40 ? 2 : sig.CharCount < 100 ? 4 : 8;
         // Dreamflow always rides a 4-bar loop so its 4-chord progression gets a full cycle; Code
-        // Groove also rides 4 bars so it can place a fill on the last bar.
-        if (IsPadFlow(preset) || IsGroove(preset)) loopBars = 4;
+        // Groove and Zion also ride 4 bars so they can place a fill/roll on the last bar.
+        if (IsPadFlow(preset) || IsGroove(preset) || IsZion(preset)) loopBars = 4;
         int steps = loopBars * 16;
 
         // caps + punctuation -> accents
@@ -239,6 +251,7 @@ public static class SignalsToBeat
         BeatPreset.Silly => "silly",
         BeatPreset.Dreamflow => "dreamflow",
         BeatPreset.CodeGroove => "codegroove",
+        BeatPreset.Zion => "zion",
         _ => "focused"
     };
 }
