@@ -49,7 +49,7 @@ public static class SignalsToBeat
             // calm keystroke packs. Base = the drum kit + bass; the conductor enforces the groove
             // voices, breathes the tempo gently, and drifts a soft motif in later.
             [BeatPreset.CodeGroove] = new(36, 43, BeatScale.MajorPentatonic, "D3",
-                new[] { BeatLayer.Kick, BeatLayer.Snare, BeatLayer.Hat, BeatLayer.Bass }),
+                new[] { BeatLayer.Kick, BeatLayer.Snare, BeatLayer.Bass }),
         };
 
     // ---- Dreamflow (pad-flow) ----

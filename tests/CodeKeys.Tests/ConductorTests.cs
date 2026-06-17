@@ -357,11 +357,11 @@ public class ConductorTests
 
         Assert.Contains(BeatLayer.Kick, t0.Layers);
         Assert.Contains(BeatLayer.Snare, t0.Layers);
-        Assert.Contains(BeatLayer.Hat, t0.Layers);
         Assert.Contains(BeatLayer.Bass, t0.Layers);
         // It's a groove, not the atmospheric bowl bed — no soft Pulse hum, no bowl.
         Assert.DoesNotContain(BeatLayer.Pulse, t0.Layers);
         Assert.DoesNotContain(BeatLayer.Bowl, t0.Layers);
+        Assert.DoesNotContain(BeatLayer.Hat, t0.Layers);   // hi-hat removed (metronome mallet)
         Assert.DoesNotContain(BeatLayer.Melody, t0.Layers); // motif waits
     }
 
@@ -386,8 +386,9 @@ public class ConductorTests
         Assert.Contains(hits, h => h.Layer == BeatLayer.Snare && h.Step == 4);
         Assert.Contains(hits, h => h.Layer == BeatLayer.Snare && h.Step == 12);
         Assert.Contains(hits, h => h.Layer == BeatLayer.Kick && h.Step == 0);
-        // Drums only — never the atmospheric Pulse sub-hum.
+        // Drums only — never the atmospheric Pulse sub-hum, and NO hi-hat (the metronome mallet).
         Assert.DoesNotContain(hits, h => h.Layer == BeatLayer.Pulse);
+        Assert.DoesNotContain(hits, h => h.Layer == BeatLayer.Hat);
     }
 
     [Fact]

@@ -220,7 +220,7 @@ public sealed class BeatSequencer : ISampleProvider
         {
             Put(BeatLayer.Kick,  BeatPattern.GrooveKickMidi);
             Put(BeatLayer.Snare, BeatPattern.GrooveSnareMidi);
-            Put(BeatLayer.Hat,   BeatPattern.GrooveHatMidi);
+            // (No hi-hat — removed; it read as a metronome mallet.)
         }
         // Bake TWO Bass variants per pitch — a mid-length default (~2s) and a long lingering one
         // (~3.6s). Pitches: scale degree 0 (root), the PERFECT FIFTH (by interval, root+7 — works

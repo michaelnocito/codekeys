@@ -219,7 +219,7 @@ public static class Conductor
         // so the atmospheric Pulse/Bass-hum logic below never runs.
         if (SignalsToBeat.IsGroove(current.Preset))
         {
-            var kit = new List<BeatLayer> { BeatLayer.Kick, BeatLayer.Snare, BeatLayer.Hat, BeatLayer.Bass };
+            var kit = new List<BeatLayer> { BeatLayer.Kick, BeatLayer.Snare, BeatLayer.Bass };
             if (build > 0.50) kit.Add(BeatLayer.Melody); // a gentle tune joins once you're in the flow
 
             // Well-placed, flow-like tempo movement: two slow sines (a primary swell plus a slower,

@@ -311,9 +311,9 @@ public static class BeatPattern
 
     /// <summary>
     /// Code Groove's drum-kit timeline: a steady lo-fi coding beat. Kick on 1 &amp; 3 (plus a boom-bap
-    /// syncopated kick on alternating bars), snare backbeat on 2 &amp; 4, swung eighth-note hats with a
-    /// last-bar fill, and a simple root/fifth bassline locked to the kick. A soft motif is added only
-    /// when the Melody layer is active (the conductor drifts it in once you're settled).
+    /// syncopated kick on alternating bars), snare backbeat on 2 &amp; 4 with a last-bar pickup, and a
+    /// simple root/fifth bassline locked to the kick. NO hi-hat (it read as a metronome mallet). A
+    /// soft motif is added only when the Melody layer is active (the conductor drifts it in later).
     /// </summary>
     private static IReadOnlyList<BeatHit> BuildGroove(BeatSpec spec, int cycle, double intensity)
     {
@@ -340,20 +340,12 @@ public static class BeatPattern
             hits.Add(new BeatHit(b + 4,  BeatLayer.Snare, GrooveSnareMidi, 0.80, 0));
             hits.Add(new BeatHit(b + 12, BeatLayer.Snare, GrooveSnareMidi, 0.80, 0));
 
-            // Hats — swung eighth notes, lighter on the offbeat.
-            for (int s = 0; s < 16; s += 2)
-            {
-                double g = (s % 4 == 0) ? 0.42 : 0.30;
-                hits.Add(new BeatHit(b + s, BeatLayer.Hat, GrooveHatMidi, g, SwingAt(b + s)));
-            }
+            // (No hi-hat — the steady eighth-note tick read as a metronome mallet, so the groove
+            // rides on kick + snare + bass instead.)
 
-            // Last-bar fill: a quick 16th hat roll + a snare pickup into the downbeat.
+            // Last-bar fill: a soft snare pickup into the downbeat.
             if (bar == spec.LoopBars - 1)
-            {
-                hits.Add(new BeatHit(b + 14, BeatLayer.Hat,   GrooveHatMidi,   0.30, 0));
-                hits.Add(new BeatHit(b + 15, BeatLayer.Hat,   GrooveHatMidi,   0.36, 0));
                 hits.Add(new BeatHit(b + 14, BeatLayer.Snare, GrooveSnareMidi, 0.45, 0));
-            }
 
             // Bass — root locked to the downbeat kick, moving to the 5th on the 3rd beat of odd bars
             // for a little motion, plus an occasional swung "and of 1" walk.
