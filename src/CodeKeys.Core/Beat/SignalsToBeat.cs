@@ -44,6 +44,10 @@ public static class SignalsToBeat
             // layers are Pad + Melody (the wash + the floating motif) — NEVER Pulse/Bass; the conductor
             // enforces this for pad-flow templates. The bowl never appears (ChakraBowlFreq returns null).
             [BeatPreset.Dreamflow] = new(56, 68, BeatScale.MajorPentatonic, "D3", new[] { BeatLayer.Pad, BeatLayer.Melody }),
+            // Celestial Sweep — Dreamflow's lush pad wash (56-68 BPM, same scale/root, same wandering
+            // chord progression) PLUS the Chakra Sweep's bowl walking Root→Crown over 21 minutes.
+            // Handled as a pad-flow template (no kick/bass) by the conductor; bowl is added on top.
+            [BeatPreset.CelestialSweep] = new(56, 68, BeatScale.MajorPentatonic, "D3", new[] { BeatLayer.Pad, BeatLayer.Melody }),
             // Code Groove — a slow, flowing half-time lo-fi beat (36-43 BPM — half the original
             // tempo, for a chilled, spacious groove). D MajorPentatonic so it stays consonant with the
             // calm keystroke packs. Base = the drum kit + bass; the conductor enforces the groove
@@ -63,7 +67,8 @@ public static class SignalsToBeat
     /// "Pad-flow" templates are pad/wash beds with NO percussive Pulse and NO bass boom — the
     /// conductor gives them a flowing chord-pad texture instead of the standard thump-driven bed.
     /// </summary>
-    public static bool IsPadFlow(BeatPreset preset) => preset == BeatPreset.Dreamflow;
+    public static bool IsPadFlow(BeatPreset preset) =>
+        preset == BeatPreset.Dreamflow || preset == BeatPreset.CelestialSweep;
 
     /// <summary>
     /// "Groove" templates are real drum-kit beats (kick / snare / hat + bass) — a head-nod coding
@@ -222,7 +227,10 @@ public static class SignalsToBeat
         // chakras over the journey and is selected per stage by the renderer (BeatSequencer), not here.
         // Returning a value (rather than null) keeps the sweep on the "musical bass + bowl from t=0"
         // code path shared by every chakra template.
-        BeatPreset.ChakraSweep => 396.0,
+        BeatPreset.ChakraSweep    => 396.0,
+        // CelestialSweep: same nominal/opening bowl as ChakraSweep (Root, 396 Hz); the renderer
+        // walks it through all seven chakras the same way, using the time-driven override.
+        BeatPreset.CelestialSweep => 396.0,
         _ => null,
     };
 
@@ -250,6 +258,7 @@ public static class SignalsToBeat
         BeatPreset.Burnout => "burnout",
         BeatPreset.Silly => "silly",
         BeatPreset.Dreamflow => "dreamflow",
+        BeatPreset.CelestialSweep => "celestialsweep",
         BeatPreset.CodeGroove => "codegroove",
         BeatPreset.Zion => "zion",
         _ => "focused"

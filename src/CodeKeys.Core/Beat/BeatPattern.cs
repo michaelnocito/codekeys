@@ -280,9 +280,9 @@ public static class BeatPattern
         // Pad: a sustained chord at the top of each bar.
         if (Has(BeatLayer.Pad))
         {
-            if (spec.Preset == BeatPreset.Dreamflow)
+            if (spec.Preset == BeatPreset.Dreamflow || spec.Preset == BeatPreset.CelestialSweep)
             {
-                // Dreamflow: walk the wandering progression. Each bar voices a 3-note stacked-scale
+                // Dreamflow / CelestialSweep: walk the wandering progression. Each bar voices a 3-note stacked-scale
                 // chord (a wash, not a strike) plus a soft sustained low root an octave down — a warm
                 // foundation that breathes under the chord, NOT a percussive thump. Long lush pads
                 // (baked via SynthVoiceFactory.CreatePad) overlap bar-to-bar into a continuous flow.

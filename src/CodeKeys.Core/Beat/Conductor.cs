@@ -227,6 +227,9 @@ public static class Conductor
         {
             var flow = new List<BeatLayer> { BeatLayer.Pad, BeatLayer.Melody };
             if (build > 0.30) flow.Add(BeatLayer.Chime); // shimmer joins as the texture assembles
+            // CelestialSweep: add the chakra bowl on top of the pad wash — the bowl walks up the
+            // seven chakras over 21 minutes (via the renderer's time-driven MIDI override).
+            if (current.Preset == BeatPreset.CelestialSweep) flow.Add(BeatLayer.Bowl);
             return current with { Bpm = bpm, Density = density, Layers = flow.ToArray() };
         }
 

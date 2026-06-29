@@ -20,6 +20,11 @@ public enum BeatPreset
     // shimmer that eases in. The "pad-flow" templates are handled specially by the conductor so they
     // never get the standard Pulse+Bass thumps (see SignalsToBeat.IsPadFlow / Conductor.Step).
     Dreamflow,
+    // Celestial Sweep — Dreamflow's lush pad wash PLUS the Chakra Sweep's walking bowl: the bowl
+    // climbs Root→Crown (396–963 Hz) over a 21-minute journey while the detuned pad chord drifts
+    // through its wandering progression underneath. The "90s new-age flow + chakra sweep" blend.
+    // Handled as a pad-flow template (no kick/bass/pulse) with a sweep bowl layered in.
+    CelestialSweep,
     // Code Groove — a steady lo-fi coding beat: kick on 1 & 3, snare backbeat on 2 & 4, swung
     // eighth-note hats, a simple root/fifth bassline, and a soft motif that drifts in later. Held
     // steadily present (not the breathing fade) so it grooves the whole work session. Handled as a

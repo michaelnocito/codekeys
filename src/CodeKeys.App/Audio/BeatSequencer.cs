@@ -247,9 +247,9 @@ public sealed class BeatSequencer : ISampleProvider
         foreach (int deg in new[] { 0, 2, 4 }) Put(BeatLayer.Splash, scale.DegreeToMidi(root, deg));   // rare dark splash
         // Chakra presets tune the bowl to a specific Solfeggio Hz; others use scale degrees.
         var chakraFreq = SignalsToBeat.ChakraBowlFreq(spec.Preset);
-        if (spec.Preset == BeatPreset.ChakraSweep)
-            // The sweep walks the bowl up all seven chakras over the journey — pre-bake every one so a
-            // stage change just reschedules (no audio-thread synthesis).
+        if (spec.Preset == BeatPreset.ChakraSweep || spec.Preset == BeatPreset.CelestialSweep)
+            // Both walking-sweep presets climb all seven chakras — pre-bake every bowl so a stage
+            // change just reschedules a cached buffer (no audio-thread synthesis).
             foreach (var c in SignalsToBeat.ChakraSweepStages)
                 Put(BeatLayer.Bowl, SignalsToBeat.ChakraBowlMidi(c), SignalsToBeat.ChakraBowlFreq(c));
         else if (chakraFreq.HasValue)
@@ -355,7 +355,7 @@ public sealed class BeatSequencer : ISampleProvider
     private static double BuildAt(BeatPreset preset, double elapsed) =>
         SignalsToBeat.IsZion(preset)
             ? Conductor.ZionEnvelope(elapsed)    // fast build from the opening hit, then hold driving
-        : preset == BeatPreset.ChakraSweep || SignalsToBeat.IsGroove(preset)
+        : preset == BeatPreset.ChakraSweep || preset == BeatPreset.CelestialSweep || SignalsToBeat.IsGroove(preset)
             ? Conductor.SweepEnvelope(elapsed)   // hold the groove steadily present (no breathing fade)
             : Conductor.CycleEnvelope(elapsed);
 
@@ -366,7 +366,7 @@ public sealed class BeatSequencer : ISampleProvider
     /// </summary>
     private void UpdateSweepBowl(double elapsedSeconds)
     {
-        _sweepBowlMidi = _spec.Preset == BeatPreset.ChakraSweep
+        _sweepBowlMidi = (_spec.Preset == BeatPreset.ChakraSweep || _spec.Preset == BeatPreset.CelestialSweep)
             ? SignalsToBeat.ChakraBowlMidi(SignalsToBeat.ChakraSweepStageAt(elapsedSeconds))
             : -1;
     }
